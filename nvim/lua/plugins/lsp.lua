@@ -29,8 +29,8 @@ return {
                 "lua_ls",
                 "rust_analyzer",
                 "tsserver",
-								"terraform-ls",
-								"pylsp",
+								"terraformls",
+								"pyright",
             },
             handlers = {
                 function(server_name) -- default handler (optional)
