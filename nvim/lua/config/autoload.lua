@@ -8,8 +8,14 @@ vim.cmd([[
 ]])
 
 -- neotree configs
-vim.cmd([[
-  Neotree show
-	Neotree %:p:h
-]])
+if next(vim.fn.argv()) ~= nil then
+	vim.cmd([[
+		Neotree show
+		Neotree %:p:h
+	]])
+else
+	vim.cmd([[
+		Neotree position=current
+	]])
+end
 
