@@ -6,7 +6,12 @@ vim.cmd([[
   autocmd Filetype lua setlocal tabstop=2
   autocmd Filetype lua setlocal shiftwidth=2
 
-	set termguicolors
+	nnoremap <silent> <C-j> <Cmd>NvimTmuxNavigateDown<CR>
+	nnoremap <silent> <C-k> <Cmd>NvimTmuxNavigateUp<CR>
+	nnoremap <silent> <C-l> <Cmd>NvimTmuxNavigateRight<CR>
+	nnoremap <silent> <C-\> <Cmd>NvimTmuxNavigateLastActive<CR>
+	nnoremap <silent> <C-Space> <Cmd>NvimTmuxNavigateNext<CR>
+
 ]])
 
 
