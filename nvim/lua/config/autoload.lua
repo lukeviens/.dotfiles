@@ -7,18 +7,9 @@ vim.cmd([[
   autocmd Filetype lua setlocal shiftwidth=2
 ]])
 
-
--- neotree configs
-if next(vim.fn.argv()) ~= nil then
-	vim.cmd([[
-		Neotree show
-		Neotree %:p:h
-	]])
-else
-	vim.cmd([[
-		Neotree position=current
-	]])
-end
+vim.cmd([[
+	Neotree show
+]])
 
 -- telescope
 local builtin = require('telescope.builtin')
