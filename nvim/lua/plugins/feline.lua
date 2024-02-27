@@ -1,6 +1,6 @@
 local gruvbox = {
     fg = '#928374',
-    bg = '#1F2223',
+    bg = '#1F2542',
     black ='#1B1B1B',
     skyblue = '#458588',
     cyan = '#83a597',

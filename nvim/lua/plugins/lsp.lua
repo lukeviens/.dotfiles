@@ -31,6 +31,7 @@ return {
                 "tsserver",
 								"terraformls",
 								"pyright",
+								"pylsp",
             },
             handlers = {
                 function(server_name) -- default handler (optional)
