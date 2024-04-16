@@ -26,10 +26,10 @@ return {
         require("mason").setup()
         require("mason-lspconfig").setup({
             ensure_installed = {
-                "lua_ls",
+                "pylsp",
                 "rust_analyzer",
 								"terraformls",
-								"pylsp",
+								"lua_ls",
             },
             handlers = {
                 function(server_name) -- default handler (optional)
@@ -38,6 +38,23 @@ return {
                         capabilities = capabilities
                     }
                 end,
+
+								["pylsp"] = function()
+										local lspconfig = require("lspconfig")
+										lspconfig.pylsp.setup {
+												capabilities = capabilities,
+												settings = {
+														pylsp = {
+																plugins = {
+																		pycodestyle = {
+																				ignore = {'E203', 'E302', 'E501', 'E303'}
+																		}
+																}
+														}
+												}
+										}
+								end,
+
 
                 ["lua_ls"] = function()
                     local lspconfig = require("lspconfig")
