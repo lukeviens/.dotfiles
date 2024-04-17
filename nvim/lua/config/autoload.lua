@@ -7,6 +7,13 @@ vim.cmd([[
   autocmd Filetype lua setlocal shiftwidth=2
 ]])
 
+-- leader
+local map = vim.api.nvim_set_keymap
+local silent = { silent = true, noremap = true }
+map("", "<Space>", "<Nop>", silent)
+vim.g.mapleader = " "
+vim.g.maplocalleader = " "
+
 -- telescope
 local builtin = require('telescope.builtin')
 vim.keymap.set('n', '<leader>ff', builtin.find_files, {})
@@ -18,8 +25,6 @@ vim.keymap.set('n', '<leader>fh', builtin.help_tags, {})
 vim.cmd([[
 	Neotree show
 ]])
-
-
 
 -- toggle between neo-tree bits and bobs
 vim.g.neotree_toggle_state = 1
@@ -40,3 +45,17 @@ end
 -- Map <leader>t to the custom toggle function
 vim.api.nvim_set_keymap('n', '<leader>t', ':lua ToggleNeotree()<CR>', { noremap = true, silent = true })
 
+-- trouble
+require("trouble").open("document_diagnostics")
+vim.keymap.set("n", "<leader>xx", function() require("trouble").toggle() end)
+
+-- remove inline errors
+vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(
+	vim.lsp.diagnostic.on_publish_diagnostics,
+	{
+		virtual_text = false,
+		signs = true,
+		update_in_insert = false,
+		underline = true,
+	}
+)
