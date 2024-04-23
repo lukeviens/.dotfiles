@@ -7,12 +7,15 @@ vim.cmd([[
   autocmd Filetype lua setlocal shiftwidth=2
 ]])
 
+-- mouse mode on
+vim.o.mouse = "a"
+
 -- leader
-local map = vim.api.nvim_set_keymap
-local silent = { silent = true, noremap = true }
-map("", "<Space>", "<Nop>", silent)
-vim.g.mapleader = " "
-vim.g.maplocalleader = " "
+--local map = vim.api.nvim_set_keymap
+--local silent = { silent = true, noremap = true }
+--map("", "<Space>", "<Nop>", silent)
+--vim.g.mapleader = " "
+--vim.g.maplocalleader = " "
 
 -- telescope
 local builtin = require('telescope.builtin')
