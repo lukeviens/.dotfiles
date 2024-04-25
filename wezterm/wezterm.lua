@@ -2,7 +2,7 @@ local wezterm = require 'wezterm'
 local config = wezterm.config_builder()
 
 
-config.font = wezterm.font 'CaskaydiaCove Nerd Font Mono'
-config.color_scheme = 'Gruvbox Dark (Gogh)'
+config.font = wezterm.font 'CaskaydiaCove NFM'
+config.color_scheme = 'tokyonight_night'
 
 return config

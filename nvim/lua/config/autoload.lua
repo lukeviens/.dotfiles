@@ -25,6 +25,9 @@ vim.keymap.set('n', '<leader>fb', builtin.buffers, {})
 vim.keymap.set('n', '<leader>fh', builtin.help_tags, {})
 
 -- neotree
+vim.cmd('Neotree right')
+
+
 vim.cmd([[
 	Neotree show
 ]])
@@ -32,7 +35,7 @@ vim.cmd([[
 -- toggle between neo-tree bits and bobs
 vim.g.neotree_toggle_state = 1
 
-function ToggleNeotree()
+function ToggleNeotreeState()
   if vim.g.neotree_toggle_state == 0 then
     vim.cmd('Neotree filesystem')
     vim.g.neotree_toggle_state = 1
@@ -45,11 +48,14 @@ function ToggleNeotree()
   end
 end
 
--- Map <leader>t to the custom toggle function
-vim.api.nvim_set_keymap('n', '<leader>t', ':lua ToggleNeotree()<CR>', { noremap = true, silent = true })
+function ToggleNeotree()
+  vim.cmd('Neotree toggle')
+end
+
+vim.api.nvim_set_keymap('n', '<leader>tt', ':lua ToggleNeotree()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<leader>t', ':lua ToggleNeotreeState()<CR>', { noremap = true, silent = true })
 
 -- trouble
-require("trouble").open("document_diagnostics")
 vim.keymap.set("n", "<leader>xx", function() require("trouble").toggle() end)
 
 -- remove inline errors
