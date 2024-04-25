@@ -78,3 +78,8 @@ vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(
 		underline = true,
 	}
 )
+
+-- colorscheme
+local onedark = require('onedark')
+onedark.setup { style = 'warmer' }
+onedark.load()

@@ -15,16 +15,16 @@ return {
 
 return {
 	{
-		"folke/tokyonight.nvim",
+		"navarasu/onedark.nvim",
 		lazy = false,
 		priority = 1000,
 		opts = {},
 	},
-
 	{
-    "LazyVim/LazyVim",
-    opts = {
-      colorscheme = "tokyonight-night",
-    },
-  }
+		"LazyVim/LazyVim",
+		opts = {
+			colorscheme = "onedark",
+		},
+	},
 }
+
