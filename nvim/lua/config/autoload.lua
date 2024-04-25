@@ -25,7 +25,7 @@ vim.keymap.set('n', '<leader>fb', builtin.buffers, {})
 vim.keymap.set('n', '<leader>fh', builtin.help_tags, {})
 
 -- neotree
-vim.cmd('Neotree right')
+vim.cmd('Neotree left')
 
 
 vim.cmd([[
@@ -57,6 +57,16 @@ vim.api.nvim_set_keymap('n', '<leader>t', ':lua ToggleNeotreeState()<CR>', { nor
 
 -- trouble
 vim.keymap.set("n", "<leader>xx", function() require("trouble").toggle() end)
+
+vim.g.trouble_toggle_state = 1
+
+function ToggleTroubleState()
+	if vim.g.trouble_toggle_state == 0 then
+		require("trouble").toggle("workspace_diagnostics")
+	elseif vim.g.trouble_toggle_state == 1 then
+		require("trouble").toggle("document_diagnostics")
+	end
+end
 
 -- remove inline errors
 vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(
