@@ -28,6 +28,12 @@ return {
 		opts = {
 			enable_git_status = true,
 			enable_git_diagnostics = true,
+			filesystem = {
+				follow_current_file = {
+					enabled = true,
+					leave_dirs_open = false,
+				}
+			},
 			buffers = {
 				follow_current_file = {
 					enabled = true, -- This will find and focus the file in the active buffer every time

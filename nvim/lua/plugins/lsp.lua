@@ -30,6 +30,7 @@ return {
                 "rust_analyzer",
 								"terraformls",
 								"lua_ls",
+								"clangd",
             },
             handlers = {
                 function(server_name) -- default handler (optional)

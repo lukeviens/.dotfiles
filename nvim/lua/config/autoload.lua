@@ -68,6 +68,9 @@ function ToggleTroubleState()
 	end
 end
 
+
+vim.api.nvim_set_keymap('n', '<leader>x', ':lua ToggleNeotreeState()<CR>', { noremap = true, silent = true })
+
 -- remove inline errors
 vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(
 	vim.lsp.diagnostic.on_publish_diagnostics,
