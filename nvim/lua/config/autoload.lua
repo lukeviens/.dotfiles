@@ -71,6 +71,10 @@ end
 
 vim.api.nvim_set_keymap('n', '<leader>x', ':lua ToggleNeotreeState()<CR>', { noremap = true, silent = true })
 
+--
+-- LSP
+--
+
 -- remove inline errors
 vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(
 	vim.lsp.diagnostic.on_publish_diagnostics,
