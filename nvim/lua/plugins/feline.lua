@@ -14,11 +14,19 @@ local gruvbox = {
     yellow = '#d79921',
 }
 
+
+-- Initialize the components table
+local components = {
+    active = {},
+    inactive = {}
+}
+
+
 return {
 	"famiu/feline.nvim",
 	config = function()
 		require('feline').setup({
-			theme = gruvbox
+			theme = gruvbox,
 		})
 		require('feline').winbar.setup()
 	end
