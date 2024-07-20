@@ -1,10 +1,10 @@
 -- general vim configs
 vim.cmd([[
-  set number relativenumber
-  set tabstop=4
-  set shiftwidth=4
-  autocmd Filetype lua setlocal tabstop=2
-  autocmd Filetype lua setlocal shiftwidth=2
+	set number relativenumber
+	set tabstop=4
+	set shiftwidth=4
+	autocmd Filetype lua setlocal tabstop=2
+	autocmd Filetype lua setlocal shiftwidth=2
 ]])
 
 -- mouse mode on
@@ -24,39 +24,36 @@ vim.keymap.set('n', '<leader>fg', builtin.live_grep, {})
 vim.keymap.set('n', '<leader>fb', builtin.buffers, {})
 vim.keymap.set('n', '<leader>fh', builtin.help_tags, {})
 
-local initial_buffer = false 
+local initial_buffer = false
 
 vim.api.nvim_create_autocmd("VimEnter", {
-  pattern = "*",
-  callback = function()
-    if vim.fn.argc() == 0 then
-      vim.cmd('Neotree current')
+	pattern = "*",
+	callback = function()
+		if vim.fn.argc() == 0 then
+			vim.cmd('Neotree current')
 			initial_buffer = true
-    end
-  end,
+		end
+	end,
 })
 
 
--- Delete the initial buffer if another buffer is opened before editing it
+-- delete the initial buffer if not edited
 vim.api.nvim_create_autocmd("VimEnter", {
-  pattern = "*",
-  callback = function()
-    if vim.fn.argc() == 0 then
-      vim.api.nvim_create_autocmd("BufEnter", {
-        pattern = "*",
-        once = true,
-        callback = function()
+	pattern = "*",
+	callback = function()
+		if vim.fn.argc() == 0 then
+			vim.api.nvim_create_autocmd("BufEnter", {
+				pattern = "*",
+				once = true,
+				callback = function()
 					if initial_buffer == true then
-						local bufnr = vim.fn.bufnr('')
-						local bufname = vim.api.nvim_buf_get_name(bufnr)
-						local modified = vim.bo.modified
 						vim.cmd('bdelete 1')
 						initial_buffer = false
 					end
-        end,
-      })
-    end
-  end,
+				end,
+			})
+		end
+	end,
 })
 
 
@@ -69,20 +66,20 @@ vim.api.nvim_create_autocmd("VimEnter", {
 vim.g.neotree_toggle_state = 1
 
 function ToggleNeotreeState()
-  if vim.g.neotree_toggle_state == 0 then
-    vim.cmd('Neotree float filesystem')
-    vim.g.neotree_toggle_state = 1
-  elseif vim.g.neotree_toggle_state == 1 then
-    vim.cmd('Neotree float buffers')
-    vim.g.neotree_toggle_state = 2
-  else
-    vim.cmd('Neotree float git_status')
-    vim.g.neotree_toggle_state = 0
-  end
+	if vim.g.neotree_toggle_state == 0 then
+		vim.cmd('Neotree float filesystem')
+		vim.g.neotree_toggle_state = 1
+	elseif vim.g.neotree_toggle_state == 1 then
+		vim.cmd('Neotree float buffers')
+		vim.g.neotree_toggle_state = 2
+	else
+		vim.cmd('Neotree float git_status')
+		vim.g.neotree_toggle_state = 0
+	end
 end
 
 function ToggleNeotree()
-  vim.cmd('Neotree toggle')
+	vim.cmd('Neotree toggle')
 end
 
 vim.api.nvim_set_keymap('n', '<leader>tt', ':lua ToggleNeotree()<CR>', { noremap = true, silent = true })
