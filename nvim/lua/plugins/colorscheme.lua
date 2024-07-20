@@ -13,6 +13,7 @@ return {
 }
 --]]
 
+--[[
 return {
 	{
 		"navarasu/onedark.nvim",
@@ -28,4 +29,20 @@ return {
 		},
 	},
 }
+--]]
 
+return {
+	{
+		"UtkarshVerma/molokai.nvim",
+		lazy = false,
+		priority = 1000,
+		opts = {
+		}
+	},
+	{
+		"LazyVim/LazyVim",
+		opts = {
+			colorscheme = "molokai",
+		},
+	},
+}
