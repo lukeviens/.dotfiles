@@ -24,8 +24,40 @@ vim.keymap.set('n', '<leader>fg', builtin.live_grep, {})
 vim.keymap.set('n', '<leader>fb', builtin.buffers, {})
 vim.keymap.set('n', '<leader>fh', builtin.help_tags, {})
 
--- neotree
-vim.cmd('Neotree current')
+local initial_buffer = false 
+
+vim.api.nvim_create_autocmd("VimEnter", {
+  pattern = "*",
+  callback = function()
+    if vim.fn.argc() == 0 then
+      vim.cmd('Neotree current')
+			initial_buffer = true
+    end
+  end,
+})
+
+
+-- Delete the initial buffer if another buffer is opened before editing it
+vim.api.nvim_create_autocmd("VimEnter", {
+  pattern = "*",
+  callback = function()
+    if vim.fn.argc() == 0 then
+      vim.api.nvim_create_autocmd("BufEnter", {
+        pattern = "*",
+        once = true,
+        callback = function()
+					if initial_buffer == true then
+						local bufnr = vim.fn.bufnr('')
+						local bufname = vim.api.nvim_buf_get_name(bufnr)
+						local modified = vim.bo.modified
+						vim.cmd('bdelete 1')
+						initial_buffer = false
+					end
+        end,
+      })
+    end
+  end,
+})
 
 
 --vim.cmd([[
