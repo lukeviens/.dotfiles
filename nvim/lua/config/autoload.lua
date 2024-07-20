@@ -25,25 +25,26 @@ vim.keymap.set('n', '<leader>fb', builtin.buffers, {})
 vim.keymap.set('n', '<leader>fh', builtin.help_tags, {})
 
 -- neotree
-vim.cmd('Neotree left')
+vim.cmd('Neotree current')
 
 
-vim.cmd([[
-	Neotree show
-]])
+--vim.cmd([[
+--	Neotree show
+--]])
 
+--[[
 -- toggle between neo-tree bits and bobs
 vim.g.neotree_toggle_state = 1
 
 function ToggleNeotreeState()
   if vim.g.neotree_toggle_state == 0 then
-    vim.cmd('Neotree filesystem')
+    vim.cmd('Neotree float filesystem')
     vim.g.neotree_toggle_state = 1
   elseif vim.g.neotree_toggle_state == 1 then
-    vim.cmd('Neotree buffers')
+    vim.cmd('Neotree float buffers')
     vim.g.neotree_toggle_state = 2
   else
-    vim.cmd('Neotree git_status')
+    vim.cmd('Neotree float git_status')
     vim.g.neotree_toggle_state = 0
   end
 end
@@ -54,6 +55,12 @@ end
 
 vim.api.nvim_set_keymap('n', '<leader>tt', ':lua ToggleNeotree()<CR>', { noremap = true, silent = true })
 vim.api.nvim_set_keymap('n', '<leader>t', ':lua ToggleNeotreeState()<CR>', { noremap = true, silent = true })
+--]]
+
+
+vim.api.nvim_set_keymap('n', '<leader>t', ':Neotree float filesystem<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<leader>tt', ':Neotree float buffers<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<leader>ttt', ':Neotree float git_status<CR>', { noremap = true, silent = true })
 
 -- trouble
 vim.keymap.set("n", "<leader>xx", function() require("trouble").toggle() end)
@@ -87,6 +94,6 @@ vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(
 )
 
 -- colorscheme
-local onedark = require('onedark')
-onedark.setup { style = 'warmer' }
-onedark.load()
+--local onedark = require('onedark')
+--onedark.setup { style = 'warmer' }
+--onedark.load()
