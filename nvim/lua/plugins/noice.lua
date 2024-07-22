@@ -15,7 +15,7 @@ return {
 			}
 		},
 		messages = {
-			view = "confirm",
+			view = "notify",
 		},
 		presets = {
 			bottom_search = true, -- use a classic bottom cmdline for search
