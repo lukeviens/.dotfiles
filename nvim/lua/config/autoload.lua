@@ -24,6 +24,7 @@ vim.keymap.set('n', '<leader>fg', builtin.live_grep, {})
 vim.keymap.set('n', '<leader>fb', builtin.buffers, {})
 vim.keymap.set('n', '<leader>fh', builtin.help_tags, {})
 
+
 local initial_buffer = false
 
 vim.api.nvim_create_autocmd("VimEnter", {
@@ -123,6 +124,16 @@ vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(
 )
 
 -- colorscheme
---local onedark = require('onedark')
---onedark.setup { style = 'warmer' }
---onedark.load()
+local onedark = require('onedark')
+onedark.setup { style = 'warmer' }
+onedark.load()
+
+vim.o.laststatus = 0
+
+vim.cmd(":hi BufferTabpageFill guibg=none")
+vim.cmd(":hi TabLine guibg=none")
+vim.cmd(":hi BufferCurrent guibg=none guifg=#fbf1f1")
+vim.cmd(":hi BufferVisible guibg=none")
+vim.cmd(":hi BufferInactive guibg=none")
+vim.cmd(":hi BufferInactiveSign guibg=none")
+vim.cmd(":hi Normal guibg=NONE ctermbg=NONE")
