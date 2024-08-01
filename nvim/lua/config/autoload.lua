@@ -1,4 +1,7 @@
--- general vim configs
+--
+-- GENERAL
+--
+
 vim.cmd([[
 	set number relativenumber
 	set tabstop=4
@@ -7,23 +10,24 @@ vim.cmd([[
 	autocmd Filetype lua setlocal shiftwidth=2
 ]])
 
--- mouse mode on
+-- mouse mode on lol
 vim.o.mouse = "a"
 
--- leader
---local map = vim.api.nvim_set_keymap
---local silent = { silent = true, noremap = true }
---map("", "<Space>", "<Nop>", silent)
---vim.g.mapleader = " "
---vim.g.maplocalleader = " "
 
--- telescope
+---
+--- TELESCOPE
+---
+
 local builtin = require('telescope.builtin')
 vim.keymap.set('n', '<leader>ff', builtin.find_files, {})
 vim.keymap.set('n', '<leader>fg', builtin.live_grep, {})
 vim.keymap.set('n', '<leader>fb', builtin.buffers, {})
 vim.keymap.set('n', '<leader>fh', builtin.help_tags, {})
 
+
+--
+-- NEOTREE
+--
 
 local initial_buffer = false
 
@@ -57,56 +61,10 @@ vim.api.nvim_create_autocmd("VimEnter", {
 	end,
 })
 
+vim.api.nvim_set_keymap('n', '<leader>t', ':Neotree float reveal filesystem<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<leader>tt', ':Neotree float reveal buffers<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<leader>ttt', ':Neotree float reveal git_status<CR>', { noremap = true, silent = true })
 
---vim.cmd([[
---	Neotree show
---]])
-
---[[
--- toggle between neo-tree bits and bobs
-vim.g.neotree_toggle_state = 1
-
-function ToggleNeotreeState()
-	if vim.g.neotree_toggle_state == 0 then
-		vim.cmd('Neotree float filesystem')
-		vim.g.neotree_toggle_state = 1
-	elseif vim.g.neotree_toggle_state == 1 then
-		vim.cmd('Neotree float buffers')
-		vim.g.neotree_toggle_state = 2
-	else
-		vim.cmd('Neotree float git_status')
-		vim.g.neotree_toggle_state = 0
-	end
-end
-
-function ToggleNeotree()
-	vim.cmd('Neotree toggle')
-end
-
-vim.api.nvim_set_keymap('n', '<leader>tt', ':lua ToggleNeotree()<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<leader>t', ':lua ToggleNeotreeState()<CR>', { noremap = true, silent = true })
---]]
-
-
-vim.api.nvim_set_keymap('n', '<leader>t', ':Neotree float filesystem<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<leader>tt', ':Neotree float buffers<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<leader>ttt', ':Neotree float git_status<CR>', { noremap = true, silent = true })
-
--- trouble
-vim.keymap.set("n", "<leader>xx", function() require("trouble").toggle() end)
-
-vim.g.trouble_toggle_state = 1
-
-function ToggleTroubleState()
-	if vim.g.trouble_toggle_state == 0 then
-		require("trouble").toggle("workspace_diagnostics")
-	elseif vim.g.trouble_toggle_state == 1 then
-		require("trouble").toggle("document_diagnostics")
-	end
-end
-
-
-vim.api.nvim_set_keymap('n', '<leader>x', ':lua ToggleNeotreeState()<CR>', { noremap = true, silent = true })
 
 --
 -- LSP
@@ -123,12 +81,15 @@ vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(
 	}
 )
 
+
+---
+--- EDITOR LOOK
+---
+
 -- colorscheme
 local onedark = require('onedark')
 onedark.setup { style = 'warmer' }
 onedark.load()
-
-vim.o.laststatus = 0
 
 vim.cmd(":hi BufferTabpageFill guibg=none")
 vim.cmd(":hi TabLine guibg=none")
@@ -137,3 +98,28 @@ vim.cmd(":hi BufferVisible guibg=none")
 vim.cmd(":hi BufferInactive guibg=none")
 vim.cmd(":hi BufferInactiveSign guibg=none")
 vim.cmd(":hi Normal guibg=NONE ctermbg=NONE")
+vim.cmd(":hi StatusLine guibg=NONE ctermbg=NONE")
+vim.cmd(":hi StatusLineNC guibg=NONE ctermbg=NONE")
+
+--statusline
+vim.g.gitblame_display_virtual_text = 0 -- Disable virtual text
+local git_blame = require('gitblame')
+
+require('lualine').setup({
+	options = {
+		theme = require('config.lualine').theme(),
+		section_separators = '',
+		component_separators = '',
+		globalstatus = true,
+	},
+	sections = {
+		lualine_a = {'branch'},
+		lualine_b = {{'filename', path = 1}},
+		lualine_c = {},
+		lualine_x = {
+			{ git_blame.get_current_blame_text, cond = git_blame.is_blame_text_available }
+		},
+		lualine_y = {'filetype'},
+		lualine_z = {'progress', 'location'}
+	},
+})
