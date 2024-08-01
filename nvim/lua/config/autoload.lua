@@ -100,7 +100,7 @@ vim.cmd(":hi BufferInactiveSign guibg=none")
 vim.cmd(":hi Normal guibg=NONE ctermbg=NONE")
 vim.cmd(":hi StatusLine guibg=NONE ctermbg=NONE")
 vim.cmd(":hi StatusLineNC guibg=NONE ctermbg=NONE")
-
+vim.cmd(":hi LspProgressNormal guibg=NONE ctermbg=NONE")
 --statusline
 vim.g.gitblame_display_virtual_text = 0 -- Disable virtual text
 local git_blame = require('gitblame')
