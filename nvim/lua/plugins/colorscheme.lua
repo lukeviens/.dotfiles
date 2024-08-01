@@ -1,15 +1,15 @@
 --[[
 return {
-  -- add gruvbox
-  { "ellisonleao/gruvbox.nvim" },
+	-- add gruvbox
+	{ "ellisonleao/gruvbox.nvim" },
 
-  -- Configure LazyVim to load gruvbox
-  {
-    "LazyVim/LazyVim",
-    opts = {
-      colorscheme = "gruvbox",
-    },
-  }
+	-- Configure LazyVim to load gruvbox
+	{
+		"LazyVim/LazyVim",
+		opts = {
+			colorscheme = "gruvbox",
+		},
+	}
 }
 --]]
 
@@ -39,9 +39,9 @@ return {
 		opts = {
 			transparent = true,
 		styles = {
-      sidebars = "transparent",
-      floats = "transparent",
-    },
+			sidebars = "transparent",
+			floats = "transparent",
+		},
 		}
 	},
 	{
