@@ -42,7 +42,10 @@ vim.api.nvim_create_autocmd("VimEnter", {
 })
 
 
--- delete the initial buffer if not edited
+--
+-- STARTUP COMMANDS
+--
+
 vim.api.nvim_create_autocmd("VimEnter", {
 	pattern = "*",
 	callback = function()
@@ -61,9 +64,9 @@ vim.api.nvim_create_autocmd("VimEnter", {
 	end,
 })
 
-vim.api.nvim_set_keymap('n', '<leader>t', ':Neotree float reveal filesystem<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<leader>tt', ':Neotree float reveal buffers<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<leader>ttt', ':Neotree float reveal git_status<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<leader>t', ':Neotree current reveal filesystem<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<leader>tt', ':Neotree current reveal buffers<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<leader>ttt', ':Neotree current reveal git_status<CR>', { noremap = true, silent = true })
 
 
 --

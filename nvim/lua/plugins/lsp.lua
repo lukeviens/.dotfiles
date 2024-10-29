@@ -17,10 +17,10 @@ return {
 		local cmp_lsp = require("cmp_nvim_lsp")
 		local on_attach = function(client, bufnr)
 			-- Using Telescope for jumping to declaration, definition, and references
-			vim.keymap.set("n", "gD", require('telescope.builtin').lsp_type_definitions, { buffer = bufnr, desc = "Go to Type Definition" })
-			vim.keymap.set("n", "gd", require('telescope.builtin').lsp_definitions, { buffer = bufnr, desc = "Go to Definition" })
-			vim.keymap.set("n", "gi", require('telescope.builtin').lsp_implementations, { buffer = bufnr, desc = "Go to Implementation" })
-			vim.keymap.set("n", "gr", require('telescope.builtin').lsp_references, { buffer = bufnr, desc = "Symbol References" })
+			vim.keymap.set("n", "gD", require('telescope.builtin').lsp_type_definitions, { desc = "Go to Type Definition" })
+			vim.keymap.set("n", "gd", require('telescope.builtin').lsp_definitions, { desc = "Go to Definition" })
+			vim.keymap.set("n", "gi", require('telescope.builtin').lsp_implementations, { desc = "Go to Implementation" })
+			vim.keymap.set("n", "gr", require('telescope.builtin').lsp_references, { desc = "Symbol References" })
 
 			-- Retaining other LSP functionalities with original bindings
 			vim.keymap.set("n", "K", vim.lsp.buf.hover, { buffer = bufnr, desc = "LSP Hover" })
@@ -42,6 +42,7 @@ return {
 				"terraformls",
 				"lua_ls",
 				"clangd",
+				"gopls",
 			},
 			handlers = {
 				function(server_name) -- default handler (optional)
