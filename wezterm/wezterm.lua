@@ -2,7 +2,9 @@ local wezterm = require 'wezterm'
 local config = wezterm.config_builder()
 
 
-config.font = wezterm.font 'CaskaydiaCove NFM'
+--config.font = wezterm.font 'CaskaydiaCove NFM'
+config.font = wezterm.font 'CaskaydiaMono Nerd Font Mono'
+
 --config.color_scheme = 'Operator Mono Dark'
 --config.color_scheme = 'Molokai (Gogh)'
 --config.color_scheme = 'Afterglow (Gogh)'
@@ -28,8 +30,8 @@ config.window_frame = {
   border_top_color = '#3f3a39',
 }
 
-config.use_fancy_tab_bar = true
+config.use_fancy_tab_bar = false
 
-config.enable_tab_bar = false
+config.enable_tab_bar = false 
 
 return config

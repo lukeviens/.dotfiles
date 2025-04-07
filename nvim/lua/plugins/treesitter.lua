@@ -30,6 +30,7 @@ return {
         "yaml",
         "svelte",
         "tsx",
+				"json",
         "typescript"
       },
 

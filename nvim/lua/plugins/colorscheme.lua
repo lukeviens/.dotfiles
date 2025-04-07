@@ -13,6 +13,7 @@ return {
 }
 --]]
 
+--[[
 return {
 	{
 		"navarasu/onedark.nvim",
@@ -29,8 +30,8 @@ return {
 		},
 	},
 }
+--]]
 
---[[
 return {
 	{
 		"UtkarshVerma/molokai.nvim",
@@ -51,4 +52,3 @@ return {
 		},
 	},
 }
---]]

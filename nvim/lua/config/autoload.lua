@@ -90,9 +90,11 @@ vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(
 ---
 
 -- colorscheme
+--[[
 local onedark = require('onedark')
 onedark.setup { style = 'warmer' }
 onedark.load()
+]]--
 
 vim.cmd(":hi BufferTabpageFill guibg=none")
 vim.cmd(":hi TabLine guibg=none")
