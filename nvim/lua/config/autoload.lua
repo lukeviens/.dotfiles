@@ -101,7 +101,7 @@ vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(
 -- colorscheme
 --[[
 local onedark = require('onedark')
-onedark.setup { style = 'warmer' }
+onedark.setup { style = 'dark' }
 onedark.load()
 ]]--
 

@@ -1,0 +1,10 @@
+k9s:
+  liveViewAutoRefresh: true 
+  ui:
+    enableMouse: true
+    headless: true
+    logoless: true
+    crumbsless: false
+    reactive: false
+    noIcons: false
+    skin: luke 

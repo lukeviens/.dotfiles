@@ -1,0 +1,32 @@
+k9s:
+  frame:
+    crumbs:
+      bgColor: "#1f1d20"
+    title:
+      bgColor: "#1f1d20"
+    header:
+      bgColor: default
+      fgColor: "#f8f8f2"
+  views:
+    charts:
+      bgColor: default
+    table:
+      bgColor: default
+      header:
+        bgColor: default
+        fgColor: "#f8f8f2"
+    xray:
+      bgColor: default
+    logs:
+      bgColor: default
+    yaml:
+      bgColor: default
+
+  body:
+    bgColor: default
+  prompt:
+    bgColor: default
+  info:
+    bgColor: default
+  dialog:
+    bgColor: default

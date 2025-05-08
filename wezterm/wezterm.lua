@@ -21,12 +21,14 @@ config.integrated_title_button_style = "Windows"
 
 config.window_background_opacity = .995
 
-local COLOR_BG         = "#1d2021"
+--local COLOR_BG       = "#1d2021"
+local COLOR_BG         = "#19181a"
 local COLOR_FG         = "#f8f8f2"
 local COLOR_SUBTLE     = "#878787"
-local COLOR_ACTIVE_BG  = "#1d2021"
+local COLOR_ACTIVE_BG  = "#19181a"
 local COLOR_ACTIVE_FG  = "#f92672"
 local COLOR_ACCENT     = "#66d9ef"
+
 
 config.window_frame = {
   border_left_width = '0.25cell',
@@ -41,6 +43,8 @@ config.window_frame = {
 
 -- tab bar styling
 config.colors = {
+  background = COLOR_BG,
+  foreground = "c5c5b5",
   tab_bar = {
     background = COLOR_BG,
 

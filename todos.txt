@@ -1,0 +1,3 @@
+- setup script
+- reload script to reload config
+- refactor colours into shared file (env or something) 
