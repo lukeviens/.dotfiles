@@ -2,12 +2,21 @@
 -- GENERAL
 --
 
+-- tabs/spaces 
 vim.cmd([[
 	set number relativenumber
 	set tabstop=4
 	set shiftwidth=4
+	set expandtab
 	autocmd Filetype lua setlocal tabstop=2
 	autocmd Filetype lua setlocal shiftwidth=2
+	autocmd Filetype typescript setlocal shiftwidth=2
+	autocmd Filetype typescript setlocal shiftwidth=2
+]])
+
+-- clipboard -> system
+vim.cmd([[
+	set clipboard^=unnamed,unnamedplus
 ]])
 
 -- mouse mode on lol

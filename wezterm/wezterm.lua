@@ -32,6 +32,6 @@ config.window_frame = {
 
 config.use_fancy_tab_bar = false
 
-config.enable_tab_bar = false 
+config.enable_tab_bar = false
 
 return config
