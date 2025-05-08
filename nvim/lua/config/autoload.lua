@@ -105,16 +105,33 @@ onedark.setup { style = 'warmer' }
 onedark.load()
 ]]--
 
-vim.cmd(":hi BufferTabpageFill guibg=none")
-vim.cmd(":hi TabLine guibg=none")
-vim.cmd(":hi BufferCurrent guibg=none guifg=#fbf1f1")
-vim.cmd(":hi BufferVisible guibg=none")
-vim.cmd(":hi BufferInactive guibg=none")
-vim.cmd(":hi BufferInactiveSign guibg=none")
+-- TODO: move this somewhere less dumb
+-- general ui 
 vim.cmd(":hi Normal guibg=NONE ctermbg=NONE")
 vim.cmd(":hi StatusLine guibg=NONE ctermbg=NONE")
 vim.cmd(":hi StatusLineNC guibg=NONE ctermbg=NONE")
+vim.cmd(":hi TabLine guibg=NONE")
 vim.cmd(":hi LspProgressNormal guibg=NONE ctermbg=NONE")
+
+-- barbar specific
+vim.cmd(":hi BufferCurrent guibg=NONE guifg=#fbf1f1")
+vim.cmd(":hi BufferCurrentIndex guibg=NONE")
+vim.cmd(":hi BufferCurrentMod guibg=NONE")
+vim.cmd(":hi BufferCurrentSign guibg=NONE")
+vim.cmd(":hi BufferCurrentTarget guibg=NONE")
+
+vim.cmd(":hi BufferInactive guibg=NONE")
+vim.cmd(":hi BufferInactiveIndex guibg=NONE")
+vim.cmd(":hi BufferInactiveSign guibg=NONE")
+
+vim.cmd(":hi BufferOffset guibg=NONE")
+vim.cmd(":hi BufferTabpageFill guibg=NONE")
+vim.cmd(":hi BufferTabpages guibg=NONE")
+
+vim.cmd(":hi BufferVisible guibg=NONE")
+vim.cmd(":hi BufferVisibleIndex guibg=NONE")
+
+
 --statusline
 vim.g.gitblame_display_virtual_text = 0 -- Disable virtual text
 local git_blame = require('gitblame')
