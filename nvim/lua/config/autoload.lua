@@ -2,6 +2,85 @@
 -- GENERAL
 --
 
+-- things going into the hole animation :o 
+-- TODO: enable more logic and configuration 
+--  - different entity types, e.g. hole consumes, tree stops, etc. 
+--  - then, better randomization of scene and events
+
+local first_buffer = vim.api.nvim_get_current_buf()
+
+local starts = {"🌳"}
+local ends   = {"🕳️"}
+local scene = {" ", " ", " ", " ", " ", " ", " "}
+scene[1] = starts[math.random(#starts)]
+scene[#scene] = ends[math.random(#ends)]
+
+local things = {"🧍‍♂️", "🧍‍♀️"}
+local thing = things[math.random(#things)]
+local thing_pos = 2
+local thing_dir = 1
+local timer = vim.loop.new_timer()
+
+scene[thing_pos] = thing
+
+local function render_scene()
+  local scene_str = table.concat(scene)
+  if vim.api.nvim_buf_is_valid(first_buffer) then
+    vim.api.nvim_buf_set_name(first_buffer, scene_str)
+  end
+end
+render_scene()
+
+local function is_action(pct)
+  return math.random(100) <= pct
+end
+
+local function run_scene()
+  -- decide action 
+  if thing_pos == #scene or thing_pos == 2 then
+    if not is_action(10) then return end
+  else
+    if not is_action(25) then return end
+  end
+
+  -- update the direction
+  if thing_pos == #scene then
+    thing = things[math.random(#things)]
+    thing_dir = -1
+  elseif thing_pos == 2 then
+    thing_dir = 1
+  end
+
+  -- update the position 
+  thing_pos = thing_pos + thing_dir
+
+  -- in the hole
+  if thing_pos == #scene then
+    local w = vim.fn.strdisplaywidth(thing)
+    scene[thing_pos-1] = string.rep(" ", w)
+  -- leaving the hole
+  elseif thing_pos == #scene - 1 and thing_dir == -1 then
+    scene[thing_pos] = thing
+  -- out of the hole
+  else
+    scene[thing_pos - thing_dir] = " "
+    scene[thing_pos] = thing
+  end
+
+  -- render the scene  
+  render_scene()
+end
+
+timer:start(0, 200, vim.schedule_wrap(run_scene))
+
+vim.api.nvim_create_autocmd("BufWipeout", {
+  buffer = first_buffer,
+  callback = function()
+    timer:stop()
+    timer:close()
+  end,
+})
+
 -- tabs/spaces 
 vim.cmd([[
 	set number relativenumber
@@ -44,6 +123,7 @@ vim.api.nvim_create_autocmd("VimEnter", {
 	pattern = "*",
 	callback = function()
 		if vim.fn.argc() == 0 then
+
 			vim.cmd('Neotree current')
 			initial_buffer = true
 		end
