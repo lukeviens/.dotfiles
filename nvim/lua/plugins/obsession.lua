@@ -1,1 +1,1 @@
-return { "tpope/vim-obsession" }
+return { "tpope/vim-obsession", cmd = "Obsession", event = "VeryLazy" }

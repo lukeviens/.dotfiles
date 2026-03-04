@@ -5,8 +5,6 @@ return {
 		"williamboman/mason-lspconfig.nvim",
 		"hrsh7th/cmp-nvim-lsp",
 		"hrsh7th/cmp-buffer",
-		"hrsh7th/cmp-path",
-		"hrsh7th/cmp-cmdline",
 		"hrsh7th/nvim-cmp",
 		"L3MON4D3/LuaSnip",
 		"saadparwaiz1/cmp_luasnip",
@@ -16,17 +14,16 @@ return {
 		local cmp = require('cmp')
 		local cmp_lsp = require("cmp_nvim_lsp")
 		local on_attach = function(client, bufnr)
-			-- Using Telescope for jumping to declaration, definition, and references
-			vim.keymap.set("n", "gD", require('telescope.builtin').lsp_type_definitions, { desc = "Go to Type Definition" })
-			vim.keymap.set("n", "gd", require('telescope.builtin').lsp_definitions, { desc = "Go to Definition" })
-			vim.keymap.set("n", "gi", require('telescope.builtin').lsp_implementations, { desc = "Go to Implementation" })
-			vim.keymap.set("n", "gr", require('telescope.builtin').lsp_references, { desc = "Symbol References" })
+			local opts = function(desc) return { buffer = bufnr, desc = desc } end
 
-			-- Retaining other LSP functionalities with original bindings
-			vim.keymap.set("n", "K", vim.lsp.buf.hover, { buffer = bufnr, desc = "LSP Hover" })
-			vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, { buffer = bufnr, desc = "Go to Next Diagnostic" })
-			vim.keymap.set("n", "]d", vim.diagnostic.goto_next, { buffer = bufnr, desc = "Go to Previous Diagnostic" })
-			vim.keymap.set("n", "gl", vim.diagnostic.open_float, { buffer = bufnr, desc = "Open Diagnostic Float" })
+			vim.keymap.set("n", "gD", require('telescope.builtin').lsp_type_definitions, opts("Go to Type Definition"))
+			vim.keymap.set("n", "gd", require('telescope.builtin').lsp_definitions, opts("Go to Definition"))
+			vim.keymap.set("n", "gi", require('telescope.builtin').lsp_implementations, opts("Go to Implementation"))
+			vim.keymap.set("n", "gr", require('telescope.builtin').lsp_references, opts("Symbol References"))
+			vim.keymap.set("n", "K", vim.lsp.buf.hover, opts("LSP Hover"))
+			vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, opts("Previous Diagnostic"))
+			vim.keymap.set("n", "]d", vim.diagnostic.goto_next, opts("Next Diagnostic"))
+			vim.keymap.set("n", "gl", vim.diagnostic.open_float, opts("Open Diagnostic Float"))
 		end
 		local capabilities = vim.tbl_deep_extend(
 			"force",
@@ -74,7 +71,7 @@ return {
 					local lspconfig = require("lspconfig")
 					lspconfig.lua_ls.setup {
 						capabilities = capabilities,
-						on_atach = on_attach,
+						on_attach = on_attach,
 						settings = {
 							Lua = {
 								diagnostics = {
@@ -110,7 +107,10 @@ return {
 		})
 
 		vim.diagnostic.config({
-			-- update_in_insert = true,
+			virtual_text = false,
+			signs = true,
+			update_in_insert = false,
+			underline = true,
 			float = {
 				focusable = false,
 				style = "minimal",

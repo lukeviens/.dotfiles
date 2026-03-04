@@ -30,20 +30,13 @@ return {
         "yaml",
         "svelte",
         "tsx",
-				"json",
-        "typescript"
+        "typescript",
+        "terraform",
       },
 
-      autotag = { enable = true },
       highlight = { enable = vim.g.vscode ~= 1 },
       indent = { enable = true },
       matchup = { enable = true },
-      playground = { enable = true },
-
-      context_commentstring = {
-        enable = true,
-        enable_autocmd = false,
-      },
 
       incremental_selection = {
         enable = true,

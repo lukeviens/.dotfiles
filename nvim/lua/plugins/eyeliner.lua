@@ -1,1 +1,1 @@
-return { "jinh0/eyeliner.nvim" }
+return { "jinh0/eyeliner.nvim", event = "VeryLazy" }

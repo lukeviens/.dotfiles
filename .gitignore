@@ -2,3 +2,8 @@ tmux/plugins/
 karabiner/automatic_backups
 
 gcloud
+packer
+git
+gh
+infracost
+tfenv

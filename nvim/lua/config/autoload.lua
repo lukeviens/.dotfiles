@@ -24,7 +24,7 @@ if animate_buffer() then
   local thing = things[math.random(#things)]
   local thing_pos = 2
   local thing_dir = 1
-  local timer = vim.loop.new_timer()
+  local timer = vim.uv.new_timer()
 
   scene[thing_pos] = thing
 
@@ -87,156 +87,121 @@ if animate_buffer() then
   })
 end
 
--- tabs/spaces 
-vim.cmd([[
-	set number relativenumber
-	set tabstop=4
-	set shiftwidth=4
-	set expandtab
-	autocmd Filetype lua setlocal tabstop=2
-	autocmd Filetype lua setlocal shiftwidth=2
-	autocmd Filetype typescript setlocal shiftwidth=2
-	autocmd Filetype typescript setlocal shiftwidth=2
-]])
+-- general options
+vim.opt.number = true
+vim.opt.relativenumber = true
+vim.opt.tabstop = 4
+vim.opt.shiftwidth = 4
+vim.opt.expandtab = true
+vim.opt.clipboard:prepend({ "unnamed", "unnamedplus" })
+vim.opt.mouse = "a"
 
--- clipboard -> system
-vim.cmd([[
-	set clipboard^=unnamed,unnamedplus
-]])
+-- filetype-specific indentation
+local indent_overrides = {
+	lua        = { tabstop = 2, shiftwidth = 2 },
+	typescript = { tabstop = 2, shiftwidth = 2 },
+	go         = { tabstop = 4, shiftwidth = 4, expandtab = false },
+}
 
--- mouse mode on lol
-vim.o.mouse = "a"
+vim.api.nvim_create_autocmd("FileType", {
+	pattern = vim.tbl_keys(indent_overrides),
+	callback = function(ev)
+		for opt, val in pairs(indent_overrides[ev.match]) do
+			vim.opt_local[opt] = val
+		end
+	end,
+})
 
 
 ---
 --- TELESCOPE
 ---
 
-local builtin = require('telescope.builtin')
-vim.keymap.set('n', '<leader>ff', builtin.find_files, {})
-vim.keymap.set('n', '<leader>fg', builtin.live_grep, {})
-vim.keymap.set('n', '<leader>fb', builtin.buffers, {})
-vim.keymap.set('n', '<leader>fh', builtin.help_tags, {})
+vim.keymap.set('n', '<leader>ff', function() require('telescope.builtin').find_files() end, { desc = "Find files" })
+vim.keymap.set('n', '<leader>fg', function() require('telescope.builtin').live_grep() end, { desc = "Live grep" })
+vim.keymap.set('n', '<leader>fb', function() require('telescope.builtin').buffers() end, { desc = "Buffers" })
+vim.keymap.set('n', '<leader>fh', function() require('telescope.builtin').help_tags() end, { desc = "Help tags" })
 
 
 --
 -- NEOTREE
 --
 
-local initial_buffer = false
-
 vim.api.nvim_create_autocmd("VimEnter", {
-	pattern = "*",
 	callback = function()
 		if vim.fn.argc() == 0 then
-
 			vim.cmd('Neotree current')
-			initial_buffer = true
-		end
-	end,
-})
-
-
---
--- STARTUP COMMANDS
---
-
-vim.api.nvim_create_autocmd("VimEnter", {
-	pattern = "*",
-	callback = function()
-		if vim.fn.argc() == 0 then
 			vim.api.nvim_create_autocmd("BufEnter", {
-				pattern = "*",
 				once = true,
 				callback = function()
-					if initial_buffer == true then
-						vim.cmd('bdelete 1')
-						initial_buffer = false
-					end
+					vim.cmd('bdelete 1')
 				end,
 			})
 		end
 	end,
 })
 
-vim.api.nvim_set_keymap('n', '<leader>t', ':Neotree current reveal filesystem<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<leader>tt', ':Neotree current reveal buffers<CR>', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<leader>ttt', ':Neotree current reveal git_status<CR>', { noremap = true, silent = true })
+vim.keymap.set('n', '<leader>t', '<cmd>Neotree current reveal filesystem<CR>', { desc = "Neotree filesystem" })
+vim.keymap.set('n', '<leader>tt', '<cmd>Neotree current reveal buffers<CR>', { desc = "Neotree buffers" })
+vim.keymap.set('n', '<leader>ttt', '<cmd>Neotree current reveal git_status<CR>', { desc = "Neotree git status" })
 
 
 --
--- LSP
+-- i LANGUAGE
 --
 
--- remove inline errors
-vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(
-	vim.lsp.diagnostic.on_publish_diagnostics,
-	{
-		virtual_text = false,
-		signs = true,
-		update_in_insert = false,
-		underline = true,
-	}
-)
+vim.filetype.add({ extension = { i = "i" } })
 
+vim.api.nvim_create_autocmd("FileType", {
+	pattern = "i",
+	callback = function()
+		-- i identifiers include - / ?
+		vim.opt_local.iskeyword:append("-,/,?")
+
+		-- LSP keymaps (buffer-local)
+		local opts = { buffer = 0 }
+		vim.keymap.set("n", "gd", require('telescope.builtin').lsp_definitions, opts)
+		vim.keymap.set("n", "gr", require('telescope.builtin').lsp_references, opts)
+		vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
+		vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, opts)
+		vim.keymap.set("n", "]d", vim.diagnostic.goto_next, opts)
+		vim.keymap.set("n", "gl", vim.diagnostic.open_float, opts)
+		vim.keymap.set("n", "<leader>ds", require('telescope.builtin').lsp_document_symbols, opts)
+
+		vim.lsp.start({
+			name = "i-lsp",
+			cmd = { "/Users/lukeviens/code/i/i/i", "worlds/lsp.i" },
+			root_dir = vim.fs.dirname(
+				vim.fs.find({ ".git" }, { upward = true })[1]
+			),
+		})
+	end,
+})
 
 ---
 --- EDITOR LOOK
 ---
 
--- colorscheme
---[[
-local onedark = require('onedark')
-onedark.setup { style = 'dark' }
-onedark.load()
-]]--
-
--- TODO: move this somewhere less dumb
--- general ui 
-vim.cmd(":hi Normal guibg=NONE ctermbg=NONE")
-vim.cmd(":hi StatusLine guibg=NONE ctermbg=NONE")
-vim.cmd(":hi StatusLineNC guibg=NONE ctermbg=NONE")
-vim.cmd(":hi TabLine guibg=NONE")
-vim.cmd(":hi LspProgressNormal guibg=NONE ctermbg=NONE")
-
--- barbar specific
-vim.cmd(":hi BufferCurrent guibg=NONE guifg=#fbf1f1")
-vim.cmd(":hi BufferCurrentIndex guibg=NONE")
-vim.cmd(":hi BufferCurrentMod guibg=NONE")
-vim.cmd(":hi BufferCurrentSign guibg=NONE")
-vim.cmd(":hi BufferCurrentTarget guibg=NONE")
-
-vim.cmd(":hi BufferInactive guibg=NONE")
-vim.cmd(":hi BufferInactiveIndex guibg=NONE")
-vim.cmd(":hi BufferInactiveSign guibg=NONE")
-
-vim.cmd(":hi BufferOffset guibg=NONE")
-vim.cmd(":hi BufferTabpageFill guibg=NONE")
-vim.cmd(":hi BufferTabpages guibg=NONE")
-
-vim.cmd(":hi BufferVisible guibg=NONE")
-vim.cmd(":hi BufferVisibleIndex guibg=NONE")
-
-
---statusline
-vim.g.gitblame_display_virtual_text = 0 -- Disable virtual text
-local git_blame = require('gitblame')
-
-require('lualine').setup({
-	options = {
-		theme = require('config.lualine').theme(),
-		section_separators = '',
-		component_separators = '',
-		globalstatus = true,
-	},
-	sections = {
-		lualine_a = {'branch'},
-		lualine_b = {{'filename', path = 1}},
-		lualine_c = {},
-		lualine_x = {
-			{ git_blame.get_current_blame_text, cond = git_blame.is_blame_text_available }
-		},
-		lualine_y = {'filetype'},
-		lualine_z = {'progress', 'location'}
-	},
+-- transparent background overrides (applied after colorscheme loads)
+vim.api.nvim_create_autocmd("ColorScheme", {
+	callback = function()
+		local transparent = {
+			"Normal", "StatusLine", "StatusLineNC", "TabLine", "LspProgressNormal",
+			"BufferCurrent", "BufferCurrentIndex", "BufferCurrentMod",
+			"BufferCurrentSign", "BufferCurrentTarget",
+			"BufferInactive", "BufferInactiveIndex", "BufferInactiveSign",
+			"BufferOffset", "BufferTabpageFill", "BufferTabpages",
+			"BufferVisible", "BufferVisibleIndex",
+		}
+		for _, group in ipairs(transparent) do
+			vim.api.nvim_set_hl(0, group, { bg = "NONE", ctermbg = "NONE" })
+		end
+		vim.api.nvim_set_hl(0, "BufferCurrent", { bg = "NONE", fg = "#fbf1f1" })
+	end,
 })
+-- trigger it now for the current colorscheme
+vim.cmd("doautocmd ColorScheme")
+
+
+-- gitblame virtual text disabled (shown in lualine instead)
+vim.g.gitblame_display_virtual_text = 0

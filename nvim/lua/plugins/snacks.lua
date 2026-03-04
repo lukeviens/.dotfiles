@@ -5,14 +5,14 @@ return {
   opts = {
     bigfile = { enabled = true },
     dashboard = { enabled = true },
-    explorer = { enabled = true },
+    explorer = { enabled = false }, -- using neo-tree
     indent = { enabled = true },
     input = { enabled = true },
-    picker = { enabled = true },
-    notifier = { enabled = true },
+    picker = { enabled = false }, -- using telescope
+    notifier = { enabled = false }, -- using noice/nvim-notify
     quickfile = { enabled = true },
     scope = { enabled = true },
-    scroll = { enabled = false }, -- this one is very important
+    scroll = { enabled = false },
     statuscolumn = { enabled = true },
     words = { enabled = true },
   },

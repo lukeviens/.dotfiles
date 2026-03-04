@@ -1,5 +1,6 @@
 return {
 	"romgrk/barbar.nvim",
+	event = "BufReadPre",
 	config = function()
 		require('barbar').setup({
 			icons = {
