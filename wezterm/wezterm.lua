@@ -1,19 +1,24 @@
 local wezterm = require 'wezterm'
 local config = wezterm.config_builder()
 
--- TODO: make this into program instead of garbage script
--- add theme engine to custom styles
+-- shared theme colors (~/.config/theme/colors)
+local function load_theme()
+  local t = {}
+  local f = io.open(os.getenv("HOME") .. "/.config/theme/colors", "r")
+  if not f then
+    return { bg = "#1f1d20", fg = "#f8f8f2", subtle = "#878787", active = "#f92672", accent = "#66d9ef" }
+  end
+  for line in f:lines() do
+    local key, val = line:match("^([%w_]+)=(.+)$")
+    if key and val then t[key] = val end
+  end
+  f:close()
+  return t
+end
 
---config.font = wezterm.font 'CaskaydiaCove NFM'
+local theme = load_theme()
+
 config.font = wezterm.font 'CaskaydiaMono Nerd Font Mono'
-
---config.color_scheme = 'Operator Mono Dark'
---config.color_scheme = 'Molokai (Gogh)'
---config.color_scheme = 'Afterglow (Gogh)'
---config.color_scheme = 'Arthur'
---config.color_scheme = 'Ashes (dark) (terminal.sexy)'
---config.color_scheme = 'Atelier Cave (base16)'
---config.color_scheme = 'Chalk (dark) (terminal.sexy)'
 config.color_scheme = 'Darktooth (base16)'
 
 config.window_decorations = "INTEGRATED_BUTTONS | RESIZE | MACOS_FORCE_ENABLE_SHADOW"
@@ -21,36 +26,27 @@ config.integrated_title_button_style = "Windows"
 
 config.window_background_opacity = .995
 
---local COLOR_BG       = "#1d2021"
-local COLOR_BG         = "#19181a"
-local COLOR_FG         = "#f8f8f2"
-local COLOR_SUBTLE     = "#878787"
-local COLOR_ACTIVE_BG  = "#19181a"
-local COLOR_ACTIVE_FG  = "#f92672"
-local COLOR_ACCENT     = "#66d9ef"
-
-
 config.window_frame = {
   border_left_width = '0.25cell',
   border_right_width = '0.25cell',
   border_bottom_height = '0.13cell',
   border_top_height = '0.25cell',
-  border_left_color = COLOR_BG,
-  border_right_color = COLOR_BG,
-  border_bottom_color = COLOR_BG,
-  border_top_color = COLOR_BG,
+  border_left_color = theme.bg,
+  border_right_color = theme.bg,
+  border_bottom_color = theme.bg,
+  border_top_color = theme.bg,
 }
 
 -- tab bar styling
 config.colors = {
-  background = COLOR_BG,
-  foreground = "c5c5b5",
+  background = theme.bg,
+  foreground = theme.fg,
   tab_bar = {
-    background = COLOR_BG,
+    background = theme.bg,
 
     active_tab = {
-      bg_color = COLOR_ACTIVE_BG,
-      fg_color = COLOR_ACTIVE_FG,
+      bg_color = theme.bg,
+      fg_color = theme.active,
       intensity = "Bold",
       underline = "None",
       italic = false,
@@ -58,24 +54,24 @@ config.colors = {
     },
 
     inactive_tab = {
-      bg_color = COLOR_BG,
-      fg_color = COLOR_SUBTLE,
+      bg_color = theme.bg,
+      fg_color = theme.subtle,
     },
 
     inactive_tab_hover = {
-      bg_color = COLOR_BG,
-      fg_color = COLOR_FG,
+      bg_color = theme.bg,
+      fg_color = theme.fg,
       italic = true,
     },
 
     new_tab = {
-      bg_color = COLOR_BG,
-      fg_color = COLOR_FG,
+      bg_color = theme.bg,
+      fg_color = theme.fg,
     },
 
     new_tab_hover = {
-      bg_color = COLOR_BG,
-      fg_color = COLOR_ACTIVE_FG,
+      bg_color = theme.bg,
+      fg_color = theme.active,
     },
   },
 }
@@ -98,17 +94,17 @@ wezterm.on("update-status", function(window, pane)
   local session_name = pane:get_foreground_process_name():match("[^/]+$") or "shell"
 
   local left = wezterm.format({
-    {Background={Color=COLOR_ACTIVE_BG}}, {Foreground={Color=COLOR_ACTIVE_FG}}, {Attribute={Intensity="Bold"}},
+    {Background={Color=theme.bg}}, {Foreground={Color=theme.active}}, {Attribute={Intensity="Bold"}},
     {Text=" 󰕰  "..session_name.." "},
     "ResetAttributes",
-    {Foreground={Color=COLOR_SUBTLE}}, {Text=""},
-    {Foreground={Color=COLOR_FG}}, {Text=" "..username.."@"..hostname.." • "..local_ip.." "},
-    {Foreground={Color=COLOR_SUBTLE}}, {Text=" "},
+    {Foreground={Color=theme.subtle}}, {Text=""},
+    {Foreground={Color=theme.fg}}, {Text=" "..username.."@"..hostname.." • "..local_ip.." "},
+    {Foreground={Color=theme.subtle}}, {Text=" "},
   })
 
   local right = wezterm.format({
-    {Foreground={Color=COLOR_ACCENT}}, {Text="󰥔 "..date.."  "},
-    {Foreground={Color=COLOR_FG}}, {Text="⏱ "..time.."  "},
+    {Foreground={Color=theme.accent}}, {Text="󰥔 "..date.."  "},
+    {Foreground={Color=theme.fg}}, {Text="⏱ "..time.."  "},
   })
 
   window:set_left_status(left)
@@ -118,8 +114,7 @@ end)
 -- tab bar prefs
 config.enable_tab_bar = true
 config.use_fancy_tab_bar = false
-config.show_tab_index_in_tab_bar = true 
+config.show_tab_index_in_tab_bar = true
 config.hide_tab_bar_if_only_one_tab = false
 
 return config
-

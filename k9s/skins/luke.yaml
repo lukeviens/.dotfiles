@@ -1,3 +1,6 @@
+# Colors sourced from ~/.config/theme/colors
+# bg=#1f1d20  fg=#f8f8f2
+# Update manually if theme changes.
 k9s:
   frame:
     crumbs:

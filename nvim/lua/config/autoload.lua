@@ -13,6 +13,7 @@ end
 
 if animate_buffer() then
   local first_buffer = vim.api.nvim_get_current_buf()
+  vim.bo[first_buffer].swapfile = false
 
   local starts = {"🌳"}
   local ends   = {"🕳️"}
@@ -31,7 +32,7 @@ if animate_buffer() then
   local function render_scene()
     local scene_str = table.concat(scene)
     if vim.api.nvim_buf_is_valid(first_buffer) then
-      vim.api.nvim_buf_set_name(first_buffer, scene_str)
+      pcall(vim.api.nvim_buf_set_name, first_buffer, scene_str)
     end
   end
   render_scene()
@@ -130,11 +131,14 @@ vim.keymap.set('n', '<leader>fh', function() require('telescope.builtin').help_t
 vim.api.nvim_create_autocmd("VimEnter", {
 	callback = function()
 		if vim.fn.argc() == 0 then
+			local startup_buf = vim.api.nvim_get_current_buf()
 			vim.cmd('Neotree current')
 			vim.api.nvim_create_autocmd("BufEnter", {
 				once = true,
 				callback = function()
-					vim.cmd('bdelete 1')
+					if vim.api.nvim_buf_is_valid(startup_buf) then
+						vim.cmd('bdelete ' .. startup_buf)
+					end
 				end,
 			})
 		end
@@ -182,6 +186,8 @@ vim.api.nvim_create_autocmd("FileType", {
 --- EDITOR LOOK
 ---
 
+local theme = require('config.theme').colors
+
 -- transparent background overrides (applied after colorscheme loads)
 vim.api.nvim_create_autocmd("ColorScheme", {
 	callback = function()
@@ -196,7 +202,7 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 		for _, group in ipairs(transparent) do
 			vim.api.nvim_set_hl(0, group, { bg = "NONE", ctermbg = "NONE" })
 		end
-		vim.api.nvim_set_hl(0, "BufferCurrent", { bg = "NONE", fg = "#fbf1f1" })
+		vim.api.nvim_set_hl(0, "BufferCurrent", { bg = "NONE", fg = theme.fg })
 	end,
 })
 -- trigger it now for the current colorscheme

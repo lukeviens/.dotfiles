@@ -8,8 +8,8 @@ export K9S_CONFIG_DIR="$HOME/.config/k9s"
 
 ### prompt bar
 
-# colours
-ACCENT='#f92672'
+# colours (from shared theme)
+source "$HOME/.config/theme/colors"
 
 # vcs info
 autoload -Uz vcs_info
@@ -22,6 +22,6 @@ zstyle ':vcs_info:git:*' formats '%b'
 setopt PROMPT_SUBST
 
 # prompt
-PROMPT='%F{$ACCENT}${vcs_info_msg_0_}%f %n@%m %1~ %# '
+PROMPT='%F{$active}${vcs_info_msg_0_}%f %n@%m %1~ %# '
 
 export PATH="/opt/homebrew/bin:$PATH"

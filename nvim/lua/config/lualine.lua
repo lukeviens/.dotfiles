@@ -1,15 +1,12 @@
+local theme = require('config.theme').colors
+
 local M = {}
 
 M.theme = function()
-	local colors = {
-		gray = "#727169",
-		innerbg = nil,
-		outerbg = nil,
-	}
 	local mode = {
-		a = { fg = colors.gray, bg = colors.outerbg, gui = "bold" },
-		b = { fg = colors.gray, bg = colors.outerbg },
-		c = { fg = colors.gray, bg = colors.innerbg },
+		a = { fg = theme.subtle, bg = nil, gui = "bold" },
+		b = { fg = theme.subtle, bg = nil },
+		c = { fg = theme.subtle, bg = nil },
 	}
 	return {
 		inactive = mode,

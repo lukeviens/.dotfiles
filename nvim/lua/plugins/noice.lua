@@ -7,6 +7,7 @@ return {
 	},
 	config = function()
 		require("notify").setup({
+			-- Required for alpha-blending when bg is transparent. Not a theme color.
 			background_colour = "#000000",
 		})
 
