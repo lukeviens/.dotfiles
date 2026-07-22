@@ -40,6 +40,7 @@ return {
 				"lua_ls",
 				"clangd",
 				"gopls",
+				"vtsls",
 			},
 			handlers = {
 				function(server_name) -- default handler (optional)
@@ -50,6 +51,7 @@ return {
 					}
 				end,
 
+	
 				["pylsp"] = function()
 					local lspconfig = require("lspconfig")
 					lspconfig.pylsp.setup {
@@ -79,6 +81,24 @@ return {
 								}
 							}
 						}
+					}
+				end,
+
+				["vtsls"] = function()
+					local lspconfig = require("lspconfig")
+					lspconfig.vtsls.setup {
+						capabilities = capabilities,
+						on_attach = on_attach,
+						settings = {
+							typescript = {
+								tsserver = {
+									maxTsServerMemory = 8192,
+								},
+							},
+							vtsls = {
+								autoUseWorkspaceTsdk = true,
+							},
+						},
 					}
 				end,
 			}

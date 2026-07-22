@@ -1,14 +1,22 @@
 return {
+  -- nvim-treesitter `main` branch (rewrite) — required for Neovim 0.12.
+  -- The old `master`-branch API (configs.setup, ensure_installed, highlight,
+  -- indent, incremental_selection, textobjects opts) no longer exists here.
   {
     "nvim-treesitter/nvim-treesitter",
-    version = false,
+    branch = "main",
+    lazy = false,
     build = ":TSUpdate",
-    event = { "BufReadPost", "BufNewFile" },
-    dependencies = {
-      "nvim-treesitter/nvim-treesitter-textobjects",
-    },
-    opts = {
-      ensure_installed = {
+    config = function()
+      local ts = require("nvim-treesitter")
+
+      ts.setup({
+        -- default install_dir is stdpath("data").."/site"; leave as-is
+      })
+
+      -- Parsers to keep installed (was `ensure_installed`). install() is async;
+      -- first run downloads/compiles, then they persist. :TSUpdate refreshes.
+      ts.install({
         "c",
         "comment",
         "cpp",
@@ -20,7 +28,6 @@ return {
         "javascript",
         "jsdoc",
         "json",
-        "jsonc",
         "markdown",
         "lua",
         "python",
@@ -32,49 +39,56 @@ return {
         "tsx",
         "typescript",
         "terraform",
-      },
+      })
 
-      highlight = { enable = vim.g.vscode ~= 1 },
-      indent = { enable = true },
-      matchup = { enable = true },
+      -- highlight + indent are per-buffer now: start treesitter on FileType.
+      -- pcall guards filetypes whose parser isn't installed yet (no error spam).
+      vim.api.nvim_create_autocmd("FileType", {
+        callback = function(args)
+          if vim.g.vscode == 1 then
+            return
+          end
+          if pcall(vim.treesitter.start, args.buf) then
+            vim.bo[args.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+          end
+        end,
+      })
+    end,
+  },
 
-      incremental_selection = {
-        enable = true,
-        keymaps = {
-          init_selection = "<Enter>",
-          node_incremental = "<Enter>",
-          node_decremental = "<BS>",
-        },
-      },
+  -- textobjects on the matching `main` branch.
+  {
+    "nvim-treesitter/nvim-treesitter-textobjects",
+    branch = "main",
+    dependencies = { "nvim-treesitter/nvim-treesitter" },
+    config = function()
+      require("nvim-treesitter-textobjects").setup({
+        select = { lookahead = true },
+      })
 
-      textobjects = {
-        select = {
-          enable = true,
-          keymaps = {
-            ["af"] = "@function.outer",
-            ["if"] = "@function.inner",
-            ["ac"] = "@class.outer",
-            ["ic"] = "@class.inner",
-            ["ab"] = "@block.outer",
-            ["ib"] = "@block.inner",
-          },
-        },
-        swap = {
-          enable = true,
-          swap_next = {
-            ["<Leader>a"] = "@parameter.inner",
-          },
-          swap_previous = {
-            ["<Leader>A"] = "@parameter.inner",
-          },
-        },
-        lsp_interop = {
-          enable = true,
-        },
-      },
-    },
-    config = function(_, opts)
-      require("nvim-treesitter.configs").setup(opts)
-    end
-  }
+      local select = require("nvim-treesitter-textobjects.select")
+      local swap = require("nvim-treesitter-textobjects.swap")
+
+      local selections = {
+        ["af"] = "@function.outer",
+        ["if"] = "@function.inner",
+        ["ac"] = "@class.outer",
+        ["ic"] = "@class.inner",
+        ["ab"] = "@block.outer",
+        ["ib"] = "@block.inner",
+      }
+      for key, obj in pairs(selections) do
+        vim.keymap.set({ "x", "o" }, key, function()
+          select.select_textobject(obj, "textobjects")
+        end, { desc = "TS select " .. obj })
+      end
+
+      vim.keymap.set("n", "<Leader>a", function()
+        swap.swap_next("@parameter.inner")
+      end, { desc = "TS swap next parameter" })
+      vim.keymap.set("n", "<Leader>A", function()
+        swap.swap_previous("@parameter.inner")
+      end, { desc = "TS swap previous parameter" })
+    end,
+  },
 }
