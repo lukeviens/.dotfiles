@@ -25,3 +25,6 @@ setopt PROMPT_SUBST
 PROMPT='%F{$active}${vcs_info_msg_0_}%f %n@%m %1~ %# '
 
 export PATH="/opt/homebrew/bin:$PATH"
+
+# zoxide (smart directory jumping — also powers sesh's dir results)
+eval "$(zoxide init zsh)"

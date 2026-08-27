@@ -1,0 +1,22 @@
+{
+  "3" : {
+    "kind" : "app",
+    "name" : "Slack"
+  },
+  "1" : {
+    "kind" : "app",
+    "name" : "WezTerm"
+  },
+  "4" : {
+    "kind" : "app",
+    "name" : "Linear"
+  },
+  "2" : {
+    "kind" : "app",
+    "name" : "Google Chrome"
+  },
+  "5" : {
+    "kind" : "app",
+    "name" : "Spotify"
+  }
+}
