@@ -11,9 +11,17 @@ export K9S_CONFIG_DIR="$HOME/.config/k9s"
 # colours (from shared theme)
 source "$HOME/.config/theme/colors"
 
-# vcs info
+# vcs info + re-read the shared palette each prompt, so the prompt follows Caps-t live
 autoload -Uz vcs_info
-precmd() { vcs_info }
+precmd() { vcs_info; source "$HOME/.config/theme/colors" 2>/dev/null }
+
+# reactive prompt: register this shell so town can SIGUSR1 it the INSTANT the theme changes
+# (hammerspoon's theme listener signals every registered pid). The trap re-reads the palette and
+# redraws the current prompt — no waiting for the next prompt. Deregister on exit.
+_town_shells="$HOME/.cache/town/shells"
+mkdir -p "$_town_shells" && : > "$_town_shells/$$"
+TRAPUSR1() { source "$HOME/.config/theme/colors" 2>/dev/null; zle reset-prompt 2>/dev/null }
+zshexit() { rm -f "$_town_shells/$$" }
 
 # only show git branch
 zstyle ':vcs_info:git:*' formats '%b'
@@ -22,7 +30,7 @@ zstyle ':vcs_info:git:*' formats '%b'
 setopt PROMPT_SUBST
 
 # prompt
-PROMPT='%F{$active}${vcs_info_msg_0_}%f %n@%m %1~ %# '
+PROMPT='%F{$active}${vcs_info_msg_0_}%f %F{$subtle}%n@%m%f %F{$fg}%1~%f %F{$active}%#%f '
 
 export PATH="/opt/homebrew/bin:$PATH"
 

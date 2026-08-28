@@ -2,21 +2,23 @@ local wezterm = require 'wezterm'
 local config = wezterm.config_builder()
 
 -- shared theme colors (~/.config/theme/colors)
-local function load_theme()
+local function load_theme()   -- read the one shared palette; the town resident keeps it present
   local t = {}
   local f = io.open(os.getenv("HOME") .. "/.config/theme/colors", "r")
-  if not f then
-    return { bg = "#1f1d20", fg = "#f8f8f2", subtle = "#878787", active = "#f92672", accent = "#66d9ef" }
+  if f then
+    for line in f:lines() do
+      local key, val = line:match("^([%w_]+)=(.+)$")
+      if key and val then t[key] = val end
+    end
+    f:close()
   end
-  for line in f:lines() do
-    local key, val = line:match("^([%w_]+)=(.+)$")
-    if key and val then t[key] = val end
-  end
-  f:close()
   return t
 end
 
 local theme = load_theme()
+
+-- re-theme live when the shared palette changes (wezterm re-reads on reload)
+wezterm.add_to_config_reload_watch_list(os.getenv("HOME") .. "/.config/theme/colors")
 
 config.font = wezterm.font 'CaskaydiaMono Nerd Font Mono'
 config.color_scheme = 'Darktooth (base16)'
@@ -38,9 +40,14 @@ config.window_frame = {
 }
 
 -- tab bar styling
+-- named DARK themes keep their curated color_scheme (Darktooth) ANSI + cursor; random rolls and
+-- light themes use the theme-derived base16 ANSI, so the whole terminal follows those.
+local gen_ansi = (theme.name == "random" or theme.mode == "light") and theme.base00
 config.colors = {
   background = theme.bg,
   foreground = theme.fg,
+  ansi = gen_ansi and { theme.base00, theme.base08, theme.base0B, theme.base0A, theme.base0D, theme.base0E, theme.base0C, theme.base05 } or nil,
+  brights = gen_ansi and { theme.base03, theme.base08, theme.base0B, theme.base0A, theme.base0D, theme.base0E, theme.base0C, theme.base07 } or nil,
   tab_bar = {
     background = theme.bg,
 
@@ -116,5 +123,16 @@ config.enable_tab_bar = true
 config.use_fancy_tab_bar = false
 config.show_tab_index_in_tab_bar = true
 config.hide_tab_bar_if_only_one_tab = false
+
+-- send Ctrl+Enter as a distinct sequence so tmux can bind it (level-aware ⌃⏎ zoom)
+config.keys = {
+  { key = 'Enter', mods = 'CTRL', action = wezterm.action.SendString('\x1b[13;5u') },
+  -- ⌥hjkl → legacy Meta bytes (ESC+letter), which tmux's `bind -n M-…` matches. (Other ⌥
+  -- keys still compose their special chars — only these four are intercepted.)
+  { key = 'h', mods = 'ALT', action = wezterm.action.SendString('\x1bh') },
+  { key = 'j', mods = 'ALT', action = wezterm.action.SendString('\x1bj') },
+  { key = 'k', mods = 'ALT', action = wezterm.action.SendString('\x1bk') },
+  { key = 'l', mods = 'ALT', action = wezterm.action.SendString('\x1bl') },
+}
 
 return config

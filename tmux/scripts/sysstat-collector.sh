@@ -17,6 +17,20 @@ FG="${C_FG:-#f8f8f2}"
 SUBTLE="${C_SUBTLE:-#878787}"
 INTERVAL="${SYSSTAT_INTERVAL:-2}"
 
+# Live theme: re-read the shared palette each sample, so the stats re-colour the moment the
+# theme cycles (Caps t) — no restart, no lost rate state. The env colours above are just a seed.
+COLORS="$HOME/.config/theme/colors"
+read_theme() {
+	[ -f "$COLORS" ] || return
+	while IFS='=' read -r k v; do
+		case "$k" in
+			accent) ACCENT="$v" ;;
+			fg)     FG="$v" ;;
+			subtle) SUBTLE="$v" ;;
+		esac
+	done < "$COLORS"
+}
+
 # Humanise a bytes-per-second figure into B/K/M/G.
 human() {
 	awk -v b="$1" 'BEGIN{
@@ -42,6 +56,7 @@ disk_bytes() {
 prev_rx=""; prev_tx=""; prev_disk=""; prev_t=""
 
 while :; do
+	read_theme                              # pick up the current palette (re-colours on Caps t)
 	now=$(date +%s)
 
 	set -- $(net_bytes)

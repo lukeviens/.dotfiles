@@ -1,13 +1,17 @@
 -- ~/.config/hammerspoon/init.lua
--- leader-key launcher on a shared substrate.
+-- HS as a town surface: it reports facts (the focused app), renders menus town shows,
+-- and obeys intentions (focus a place). The thinking — pickers, favourites, actions —
+-- lives in town's residents. HS keeps only what's mac's: the app/window lists, the
+-- webview renderer, and the ⌃M leader that talks words.
 --   theme.lua    the palette (same file wezterm reads)
---   picker.lua   a fully-themed webview overlay picker — the seam: {choices, onSelect, onFavourite}
---   favourites.lua  persistent number slots (storage only)
---   init.lua     the data (kinds, leaves) + the keymap
+--   picker.lua   a themed webview overlay — the renderer: {choices, onSelect, onFavourite}
 
-local theme      = require("theme")
-local picker     = require("picker")
-local favourites = require("favourites")
+local theme   = require("theme")
+local picker  = require("picker")
+local perf    = require("perf")
+local windows = require("windows")   -- mac window management + chord-binding
+local places  = require("places")    -- app/window lists, decorate, focus report + obey
+local mode    = require("mode")      -- the Caps town-mode (modal + exclusive eventtap)
 local function color(hex) return { hex = hex, alpha = 1.0 } end
 
 -- one in-theme alert style: always a bg fill + a palette stroke; the rest defaults
@@ -28,192 +32,150 @@ end
 local HOME     = os.getenv("HOME")
 local watchers = {}   -- anchor pathwatchers so they aren't garbage-collected
 
--- ── apps (⌃M f) — cached; ~300 iconForFile calls shouldn't run every open ─────
-local APP_DIRS = {
-  "/Applications", "/Applications/Utilities",
-  "/System/Applications", "/System/Applications/Utilities",
-  HOME .. "/Applications",
-}
+-- apps, windows, decorate, focus report + obey all live in places.lua (started below).
+local last_raw = {}   -- the most recent pick's raw choices, so perf can replay a real one
 
-local app_cache
-local function list_apps()
-  if app_cache then return app_cache end
-  local seen, out = {}, {}
-  for _, dir in ipairs(APP_DIRS) do
-    if hs.fs.attributes(dir) then
-      for file in hs.fs.dir(dir) do
-        if file:match("%.app$") then
-          local name = file:gsub("%.app$", "")
-          if not seen[name] then
-            seen[name] = true
-            local path = dir .. "/" .. file
-            out[#out + 1] = { text = name, icon = hs.image.iconForFile(path), iconKey = path, kind = "app" }
-          end
-        end
-      end
+-- ── town: HS reports facts and obeys intentions; town does the thinking. The bus — one
+-- persistent, self-reconnecting socket to the square — lives in town.lua; here we just listen/talk.
+-- (Started at the very bottom, after every listener below is registered.)
+local town = require("town")
+
+-- HS's theme applies to its own UI. Only the palette FACT — a future `theme` is the cycle
+-- intention (Caps t), meant for the theme resident, not a palette to apply here.
+local lastMode
+town.listen("theme", function(w)
+  if w.tense == "future" then return end
+  local changed = false
+  for k, v in pairs(w.body) do if theme[k] ~= v then theme[k] = v; changed = true end end
+  if changed then
+    toast("theme ↻")
+    -- repaint any live interactive zsh prompts that registered themselves (see .zshrc): SIGUSR1
+    -- fires their TRAPUSR1, which re-reads the palette and redraws. We only signal a pid that IS a
+    -- live zsh (guards against PID reuse) and rm any stale registration as we pass it. Async.
+    hs.task.new("/bin/sh", nil, { "-c",
+      'd="$HOME/.cache/town/shells"; [ -d "$d" ] || exit 0; for f in "$d"/*; do [ -e "$f" ] || continue; ' ..
+      'p=${f##*/}; case "$(ps -p "$p" -o comm= 2>/dev/null)" in *zsh) kill -USR1 "$p" 2>/dev/null;; *) rm -f "$f";; esac; done' }):start()
+  end
+  picker.theme(w.body)   -- recolour the live picker webview (Caps f)
+  -- and flip the whole Mac: macOS light/dark follows the palette's mode (only when it changes,
+  -- so dark→black or sun→light don't needlessly re-flip the whole system).
+  if w.body.mode and w.body.mode ~= lastMode then
+    lastMode = w.body.mode
+    local dark = w.body.mode ~= "light"
+    hs.task.new("/usr/bin/osascript", nil, { "-e",
+      'tell application "System Events" to tell appearance preferences to set dark mode to ' .. tostring(dark) }):start()
+    -- Claude Code follows too: flip it to the matching ANSI theme so it rides the terminal palette
+    -- town themes. Atomic + preserves the rest of settings.json; no-op if jq or the file is absent.
+    local ctheme = dark and "dark-ansi" or "light-ansi"
+    local ct = hs.task.new("/bin/sh", nil, { "-c",
+      's="$HOME/.claude/settings.json"; command -v jq >/dev/null 2>&1 || exit 0; [ -f "$s" ] || exit 0; ' ..
+      'tmp=$(mktemp) && jq --arg v "' .. ctheme .. '" \'.theme = $v\' "$s" > "$tmp" && mv "$tmp" "$s"' })
+    ct:setEnvironment({ HOME = HOME, PATH = "/opt/homebrew/bin:/usr/bin:/bin" })
+    ct:start()
+  end
+end)
+
+-- HS renders any menu town shows and reports the choice (or favourite). It knows nothing of
+-- what the menu is or what a pick means — town decides both. (mode.lua has its own `show`
+-- listener to yield the keyboard, so nothing is forward-declared here.)
+town.listen("show", function(w)
+  last_raw = w.body.choices or {}
+  picker.show({ placeholder = "go", choices = places.decorate(last_raw),
+    onSelect    = function(c) town.talk("chose", { id = c.id }, "past") end,
+    onFavourite = function(c, slot) town.talk("favourite", { slot = slot, id = c.id }, "future") end })
+end)
+
+-- perf: measuring is a word. `town talk future perf` runs the facet suite and diffs it
+-- against the saved baseline; `perf what=baseline` saves the current run as the baseline.
+-- Facets are the synchronous costs that freeze HS if they balloon; the verdict watches the tail.
+local function perf_suite()
+  local raw = (#last_raw > 0) and last_raw or (function()   -- replay a real pick, else synthesize one
+    local r = {}
+    for _, win in ipairs(places.list_windows()) do r[#r + 1] = { label = win.title, id = win.app, kind = "window", app = win.app } end
+    if #r == 0 then for _, a in ipairs(places.list_apps()) do r[#r + 1] = { label = a.text, id = a.text, kind = "app", app = a.text } end end
+    return r
+  end)()
+  local popts = { placeholder = "go", choices = places.decorate(raw), onSelect = function() end }
+  return {
+    { name = "apps.warm",         run = function() places.list_apps() end },
+    { name = "apps.cold",         run = function() places.list_apps(true) end, reps = 5 },
+    { name = "windows.warm",      run = function() places.list_windows() end },
+    { name = "windows.cold",      run = function() places.list_windows(true) end, reps = 5 },
+    { name = "icons.decorate",    run = function() places.decorate(raw) end },
+    { name = "picker.open.delta", before = function() picker.show(popts) end,  -- repeat while up (spam path)
+      run = function() picker.show(popts) end, after = function() picker.hide() end },
+    { name = "picker.open.fresh", run = function() picker.hide(); picker.show(popts) end, reps = 3 },
+  }
+end
+
+town.listen("perf", function(w)
+  local ok, res = pcall(function()
+    local now = perf.run(perf_suite())
+    picker.hide()                                 -- the suite leaves it up; put it away
+    local text, worst
+    if w.body and w.body.what == "baseline" then
+      perf.save(now); text = "baseline saved.\n\n" .. (perf.report(now, now))
+    else
+      text, worst = perf.report(now, perf.load())
     end
+    perf.write(text)
+    return worst or "baseline"
+  end)
+  if ok then toast("perf → " .. res)
+  else perf.write("perf ERROR:\n" .. tostring(res)); toast("perf error (see report)") end
+end)
+
+-- windows + places register their own listeners (move/wiring/arrange; gather/place-obey) and
+-- own their state. windows also sets the initial terminal-aware chord mode.
+windows.start(town)
+places.start(town)
+
+-- eventful: report focus + set the nav mode the instant focus changes. No reconcile timer:
+-- focus is pull-only and self-heals on the next switch. (Cross-cutting, so it lives here and
+-- calls into both modules — places' focus report + windows' terminal-aware chord toggle.)
+townwatch = hs.application.watcher.new(function(_, event)
+  if event == hs.application.watcher.activated then
+    places.report_front()
+    windows.nav_mode()
   end
-  app_cache = out
-  return out
-end
+end)
+townwatch:start()
 
-for _, dir in ipairs({ "/Applications", HOME .. "/Applications" }) do
-  if hs.fs.attributes(dir) then
-    watchers[#watchers + 1] = hs.pathwatcher.new(dir, function() app_cache = nil end):start()
-  end
-end
+-- town-mode: the Caps modal + its exclusive eventtap + the on-screen badge live in mode.lua.
+-- It needs the terminal-glide (windows) and the window-cache warm-up (places) injected.
+mode.start(town, windows.wez_nav, places.list_windows)
 
--- ── windows (⌃M w) — live, so no cache ────────────────────────────────────────
-local function list_windows()
-  local out = {}
-  for _, w in ipairs(hs.window.orderedWindows()) do
-    local title = w:title()                    -- one accessibility query, reused
-    if w:isStandard() and title ~= "" then
-      local app  = w:application()
-      local name = app and app:name() or "?"
-      local bid  = app and app:bundleID()
-      out[#out + 1] = {
-        text = name .. " — " .. title,
-        icon = bid and hs.image.imageFromAppBundle(bid) or nil,
-        iconKey = bid, win = w, kind = "window", app = name, title = title,
-      }
-    end
-  end
-  return out
-end
-
--- ── sesh sessions (⌃M s) — switch the attached WezTerm client to the choice ───
-local TMUX        = "/opt/homebrew/bin/tmux"
-local WEZTERM_BID = "com.github.wez.wezterm"
-
-local function list_sessions()
-  local out = {}
-  local raw = hs.execute(TMUX .. " list-sessions -F '#{session_name}' 2>/dev/null") or ""
-  local icon = hs.image.imageFromAppBundle(WEZTERM_BID)
-  for line in raw:gmatch("[^\r\n]+") do
-    local name = (line:gsub("%s+$", ""))
-    if name ~= "" then
-      out[#out + 1] = { text = name, icon = icon, iconKey = "wezterm", kind = "session" }
-    end
-  end
-  return out
-end
-
--- pass the session name as a real argv element (no shell string → no injection).
-local function connect_session(name)
-  hs.application.launchOrFocus("WezTerm")
-  hs.task.new(TMUX, function(_, out)
-    local tty = out and out:match("[^\r\n]+")   -- first attached client
-    if tty then hs.task.new(TMUX, nil, { "switch-client", "-c", tty, "-t", name }):start() end
-  end, { "list-clients", "-F", "#{client_tty}" }):start()
-end
-
--- ── kinds: each pickable thing knows how to become a favourite and reactivate ──
--- favourite(choice)->target (stored); activate(target) reopens it from storage alone.
-local KINDS = {
-  app = {
-    favourite = function(c) return { kind = "app", name = c.text } end,
-    activate  = function(t)
-      local app = hs.application.get(t.name)
-      if app and app:isFrontmost() then          -- already here → cycle its windows (like ⌘`)
-        local wins = {}
-        for _, w in ipairs(app:allWindows()) do
-          if w:isStandard() then wins[#wins + 1] = w end
-        end
-        if #wins > 1 then
-          table.sort(wins, function(a, b) return a:id() < b:id() end)   -- stable ring order
-          local cur, idx = hs.window.focusedWindow(), 1
-          for i, w in ipairs(wins) do if cur and w:id() == cur:id() then idx = i; break end end
-          wins[(idx % #wins) + 1]:focus()
-          return
-        end
-      end
-      hs.application.launchOrFocus(t.name)        -- not here (or single window) → just go
-    end,
-  },
-  session = {
-    favourite = function(c) return { kind = "session", name = c.text } end,
-    activate  = function(t) connect_session(t.name) end,
-  },
-  window = {
-    favourite = function(c) return { kind = "window", app = c.app, title = c.title } end,
-    activate = function(t)                       -- windows are ephemeral: best-effort re-find
-      local a = t.app and hs.application.get(t.app)
-      if a then
-        for _, w in ipairs(a:allWindows()) do
-          if w:title() == t.title then w:focus(); return end
-        end
-        a:activate()                             -- fallback: focus the app
-      elseif t.app then
-        hs.application.launchOrFocus(t.app)
-      end
-    end,
-  },
-}
-
-local function favourite(choice, slot)           -- the picker footer already confirms in-theme
-  local k = KINDS[choice.kind]
-  if k then favourites.set(slot, k.favourite(choice)) end
-end
-
-local function jump(slot)
-  local t = favourites.get(slot)
-  if not t then toast("⌃M " .. slot .. " · empty"); return end
-  local k = KINDS[t.kind]
-  if k then k.activate(t) end
-end
-
-local function slot_label(t) return t and (t.name or t.title or t.app) or nil end
-
--- ── leaves: picker actions. each is { key, label, action }; onFavourite enables ⭐ ─
-local function pick(key, label, list, onSelect)
-  return { key = key, label = label, action = function()
-    picker.show({ placeholder = label, choices = list(), onSelect = onSelect, onFavourite = favourite })
-  end }
-end
-
-local leaves = {
-  pick("f", "apps",     list_apps,     function(c) hs.application.launchOrFocus(c.text) end),
-  pick("w", "windows",  list_windows,  function(c) if c.win then c.win:focus() end end),
-  pick("s", "sessions", list_sessions, function(c) connect_session(c.text) end),
-}
-
--- ── leader:  ⌃M  then …  ──────────────────────────────────────────────────────
-local TIMEOUT = 3     -- seconds before an idle leader auto-exits (which-key style)
-local ALERT = style{ stroke = theme.active, radius = 10, size = 16 }
-
-local leader, leaderTimer = hs.hotkey.modal.new({ "ctrl" }, "m"), nil
-function leader:entered()
-  hs.alert.closeAll()
-  local m = "  search\n"
-  for _, lf in ipairs(leaves) do m = m .. "  " .. lf.key .. "   " .. lf.label .. "\n" end
-  m = m .. "\n  favourites\n"
-  local any = false
-  for i = 1, 9 do
-    local lbl = slot_label(favourites.get(i))
-    if lbl then any = true; m = m .. "  " .. i .. "   " .. lbl .. "\n" end
-  end
-  if not any then m = m .. "  · press 1–9 inside a picker to favourite\n" end
-  m = m .. "\n  esc   cancel"
-  hs.alert.show(m, ALERT, TIMEOUT)
-  leaderTimer = hs.timer.doAfter(TIMEOUT, function() leader:exit() end)   -- don't get stuck
-end
-function leader:exited()
-  hs.alert.closeAll()
-  if leaderTimer then leaderTimer:stop(); leaderTimer = nil end
-end
-
-for _, lf in ipairs(leaves) do
-  leader:bind({}, lf.key, function() leader:exit(); lf.action() end)
-end
-for i = 1, 9 do
-  leader:bind({}, tostring(i), function() leader:exit(); jump(i) end)
-end
-leader:bind({}, "escape", function() leader:exit() end)
-
--- ── reload on save (nvim-style DX) ────────────────────────────────────────────
+-- ── reload on save (nvim-style DX) — DEBOUNCED. A burst of saves (editing several files
+-- at once) must coalesce into ONE reload: firing hs.reload() per-save interrupts a reload
+-- mid-flight and strands HS before it re-registers this very watcher. Wait for the dust.
+local reloadTimer
 watchers[#watchers + 1] = hs.pathwatcher.new(HOME .. "/.config/hammerspoon/", function(files)
-  for _, f in ipairs(files) do if f:match("%.lua$") then hs.reload() end end
+  for _, f in ipairs(files) do
+    if f:match("%.lua$") then
+      if reloadTimer then reloadTimer:stop() end
+      reloadTimer = hs.timer.doAfter(0.5, hs.reload)   -- 0.5s after the LAST change, reload once
+      return
+    end
+  end
 end):start()
+
+-- tear down the long-lived taps/watchers on reload or quit — otherwise each reload leaks
+-- another eventtap/watcher and every keystroke gets processed N times (HS grinds to a crawl).
+hs.shutdownCallback = function()
+  mode.stop()      -- the Caps eventtap + badge
+  windows.stop()   -- the chord hotkeys
+  places.stop()    -- window.filter subscription + app-dir pathwatchers
+  town.stop()      -- the bus: heartbeat + socket
+  if townwatch then townwatch:stop() end   -- the cross-cutting app-activation watcher (orchestrator's)
+  if townwarm then townwarm:stop() end     -- the 2s prewarm timer, if a reload beat it
+  for _, pw in ipairs(watchers or {}) do pcall(function() pw:stop() end) end -- the reload pathwatcher
+end
+
+-- boot: connect to town (every listener above is now registered, so nothing misses the first
+-- hint/wire), then pre-build the picker webview + warm its icon cache in the background so the
+-- first ⌃M f / Caps f opens instantly instead of paying webview-creation + icon-encoding then.
+town.start()
+picker.build()
+townwarm = hs.timer.doAfter(2, function() picker.prewarm(places.list_apps()) end)  -- global, or GC'd before it fires
 
 hs.alert.show("hammerspoon: loaded", style{ stroke = theme.accent, text = theme.accent }, 1.2)

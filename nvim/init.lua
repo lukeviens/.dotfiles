@@ -27,3 +27,6 @@ require("lazy").setup({
 
 -- general vim config
 require("config.autoload")
+
+-- register this nvim's RPC socket by tmux pane (for the stack-wide leader)
+require("config.panereg")

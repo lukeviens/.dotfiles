@@ -1,5 +1,7 @@
 local M = {}
 
+M.path = os.getenv("HOME") .. "/.config/theme/colors"   -- the one shared palette file
+
 local function parse_colors(path)
 	local colors = {}
 	local f = io.open(path, "r")
@@ -22,6 +24,9 @@ local function parse_colors(path)
 	return colors
 end
 
-M.colors = parse_colors(os.getenv("HOME") .. "/.config/theme/colors")
+-- one parser for the shared palette: `read()` re-reads it fresh (for live Caps-t follows);
+-- `colors` is the startup snapshot most callers want.
+function M.read() return parse_colors(M.path) end
+M.colors = parse_colors(M.path)
 
 return M

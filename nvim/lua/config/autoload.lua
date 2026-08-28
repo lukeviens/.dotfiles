@@ -192,21 +192,74 @@ local theme = require('config.theme').colors
 vim.api.nvim_create_autocmd("ColorScheme", {
 	callback = function()
 		local transparent = {
-			"Normal", "StatusLine", "StatusLineNC", "TabLine", "LspProgressNormal",
-			"BufferCurrent", "BufferCurrentIndex", "BufferCurrentMod",
-			"BufferCurrentSign", "BufferCurrentTarget",
+			"Normal", "StatusLine", "StatusLineNC", "TabLine", "TabLineFill", "LspProgressNormal",
+			"DiagnosticSignError", "DiagnosticSignWarn", "DiagnosticSignInfo", "DiagnosticSignHint", "DiagnosticSignOk",
+			-- BufferCurrent is owned outright below (bg=NONE + live fg), so it's intentionally not here
+			"BufferCurrentIndex", "BufferCurrentMod", "BufferCurrentSign", "BufferCurrentTarget",
 			"BufferInactive", "BufferInactiveIndex", "BufferInactiveSign",
-			"BufferOffset", "BufferTabpageFill", "BufferTabpages",
-			"BufferVisible", "BufferVisibleIndex",
+			"BufferOffset", "BufferTabpageFill", "BufferTabpages", "BufferVisible", "BufferVisibleIndex",
+			"LineNr", "LineNrAbove", "LineNrBelow", "CursorLineNr", "SignColumn", "FoldColumn", "EndOfBuffer",
 		}
 		for _, group in ipairs(transparent) do
-			vim.api.nvim_set_hl(0, group, { bg = "NONE", ctermbg = "NONE" })
+			local h = vim.api.nvim_get_hl(0, { name = group, link = false }); h.bg, h.ctermbg = nil, nil; vim.api.nvim_set_hl(0, group, h)
 		end
-		vim.api.nvim_set_hl(0, "BufferCurrent", { bg = "NONE", fg = theme.fg })
+		-- the current buffer-tab fg must follow the LIVE palette (Caps t) — the `theme` above is
+		-- cached at startup (dark → white), so on a light swap it'd stay white-on-white. Read fresh.
+		local fg = require('config.theme').read().fg or theme.fg
+		vim.api.nvim_set_hl(0, "BufferCurrent", { bg = "NONE", fg = fg })
 	end,
 })
 -- trigger it now for the current colorscheme
 vim.cmd("doautocmd ColorScheme")
+
+-- Follow the town palette live when ~/.config/theme/colors changes (Caps t), so nvim re-themes
+-- with the whole desktop. HYBRID: the four NAMED themes use handcrafted schemes (max polish);
+-- any UNKNOWN theme (a random roll) generates a full base16 scheme from the 5 palette values.
+-- Either way the bg is transparent, so it rides WezTerm's background.
+do
+	local palette = require('config.theme')   -- one parser + the one path (config/theme.lua)
+	local SCHEME = { dark = "molokai", sun = "tokyonight-day", light = "tokyonight-day", black = "molokai" }
+	local uv = vim.uv or vim.loop
+
+	local function read_skin()   -- the whole palette (fresh), over name/mode defaults
+		return vim.tbl_extend("force", { name = "dark", mode = "dark" }, palette.read())
+	end
+
+	-- the resident writes the derived 16-colour scheme (base00-0F) into the file; read it —
+	-- one generator (in the theme resident), shared by WezTerm ANSI and nvim.
+	local function file_base16(s)
+		local pal = {}
+		for i = 0, 15 do local k = string.format("base%02X", i); pal[k] = s[k] end
+		return pal
+	end
+
+	local function apply()
+		local s = read_skin()
+		local dark = s.mode ~= "light"
+		vim.o.background = dark and "dark" or "light"
+		if SCHEME[s.name] then
+			pcall(vim.cmd.colorscheme, SCHEME[s.name])           -- named: the handcrafted scheme
+		elseif s.bg then                                         -- random/unknown: generate one
+			-- mini.base16 maps a 16-colour palette across every modern group (treesitter @-captures,
+			-- LSP, semantic tokens, plugins) — no hand-linking, correct on current nvim.
+			local ok, base16 = pcall(require, "mini.base16")
+			if ok then
+				base16.setup({ palette = file_base16(s), use_cterm = false })
+				for _, g in ipairs({ "TabLineFill", "TabLine", "StatusLine" }) do vim.api.nvim_set_hl(0, g, { bg = "NONE" }) end
+				vim.cmd("doautocmd ColorScheme")   -- run our transparency overrides (incl. the gutter)
+			end
+		end
+	end
+	vim.api.nvim_create_autocmd("VimEnter", { callback = apply })  -- match the theme once loaded
+	local function watch()
+		local h = uv.new_fs_event(); if not h then return end
+		h:start(palette.path, {}, vim.schedule_wrap(function()
+			apply()
+			h:stop(); watch()   -- re-arm (survives the resident's rewrite)
+		end))
+	end
+	watch()
+end
 
 
 -- gitblame virtual text disabled (shown in lualine instead)
