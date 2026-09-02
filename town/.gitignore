@@ -1,1 +1,6 @@
 target/
+
+# scrubber machine-local secrets — the salt (keeps tokens non-reversible) and the token→original
+# codebook (for local debugging). The scrubbed fixture + snapshots ARE committed.
+tests/fixtures/.salt
+tests/fixtures/.codebook.json

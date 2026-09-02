@@ -5,10 +5,10 @@
 //! spec of how town composes — living in the repo, not in a dotfiles readme.
 
 mod common;
-use common::{effects, feed_file, feed_popen, resident, say, ROOT};
+use common::{effects, feed_file, golden, resident, say, ROOT};
 
 use mlua::{Lua, LuaSerdeExt, Table, Value as LuaValue};
-use serde_json::json;
+use serde_json::{json, Value};
 use town::word::{Tense, Word};
 
 // ── keys: a key event becomes an intention ──────────────────────────────────
@@ -248,9 +248,8 @@ fn the_universal_picker_merges_every_source() {
     assert_eq!(labels.iter().filter(|&&l| l == "Chrome").count(), 1); // past + live Chrome deduped
 }
 
-// ── grammar: every constructor in lib.lua must produce a word the ENGINE accepts. A typo'd
-// tense would silently deserialize to nothing at runtime (say() drops it) — this catches it
-// here, loudly, at test time. Deserializes via the exact path the engine uses (lua.from_value).
+// every constructor must produce a word the engine accepts — a typo'd tense would just vanish at
+// runtime (say() drops it). Same deserialize path the engine uses.
 #[test]
 fn every_constructor_round_trips_into_a_word() {
     let lua = Lua::new();
@@ -280,21 +279,19 @@ fn every_constructor_round_trips_into_a_word() {
     }
 }
 
-// ── sandbox: menu's io.popen(tmux list-sessions) is hermetic now — feed canned sessions and
-// assert they flow into the universal picker, with no real tmux and no dev-machine dependency.
+// sessions the surface gathered reach the picker — menu no longer shells tmux itself.
 #[test]
-fn canned_sessions_flow_through_the_picker() {
+fn sessions_from_the_surface_reach_the_picker() {
     let (lua, menu) = resident("menu", json!({}), json!({ "place": [] }));
-    feed_popen(&lua, "list-sessions", "alpha\nbravo\n");
-    let show = say(&lua, &menu, json!({"kind":"everything","tense":"future","body":{"places":[]}})).unwrap();
+    let live = json!([{ "kind": "session", "name": "alpha" }, { "kind": "session", "name": "bravo" }]);
+    let show = say(&lua, &menu, json!({ "kind": "everything", "tense": "future", "body": { "places": live } })).unwrap();
     let labels: Vec<String> = show["body"]["choices"].as_array().unwrap()
         .iter().map(|c| c["label"].as_str().unwrap().to_string()).collect();
     assert!(labels.iter().any(|l| l == "alpha  ·  session"), "{labels:?}");
     assert!(labels.iter().any(|l| l == "bravo  ·  session"), "{labels:?}");
 }
 
-// ── sandbox: a CONNECTOR resident (theme) is testable at last — its file write is CAPTURED, not
-// performed. Cycling the palette (Caps t) writes the next skin; assert the captured content.
+// a connector resident under test: theme's file write is captured, not performed. cycle → next skin.
 #[test]
 fn theme_cycle_writes_the_next_skin_as_a_captured_effect() {
     let (lua, theme) = resident("theme", json!({}), json!({}));
@@ -305,4 +302,81 @@ fn theme_cycle_writes_the_next_skin_as_a_captured_effect() {
     let last_write = effects(&lua).into_iter().rev()
         .find(|e| e["kind"] == "write").expect("theme cycle should have written the palette");
     assert!(last_write["content"].as_str().unwrap().contains("name=sun"), "cycled dark → sun");
+}
+
+// ── the trail (Caps o/i), one full walk: build, walk down, swallow the flip's own echo, walk up,
+// past-the-end no-op, reorder, the o/i case (a real re-focus of a flipped-through place reorders,
+// isn't swallowed), kind filter. The snapshot records where each flip lands — read it to check the
+// walk is ⌘-tab / :bnext. ──
+#[test]
+fn the_trail_walk_pinned() {
+    let (lua, place) = resident("place", json!({}), json!({}));
+    let win = |app: &str| json!({ "kind": "place", "tense": "present", "body": { "kind": "window", "app": app } });
+    let back = json!({ "kind": "back", "tense": "future", "body": {} });
+    let fwd = json!({ "kind": "forward", "tense": "future", "body": {} });
+    let back_session = json!({ "kind": "back", "tense": "future", "body": { "kind": "session" } });
+
+    let steps: Vec<(&str, Value)> = vec![
+        ("focus Alpha", win("Alpha")),
+        ("focus Bravo", win("Bravo")),
+        ("focus Charlie", win("Charlie")),          // stack: [Charlie, Bravo, Alpha], cursor at front
+        ("back", back.clone()),                     // → Bravo
+        ("back", back.clone()),                     // → Alpha
+        ("echo Alpha (flip's own echo — swallow)", win("Alpha")),
+        ("forward", fwd.clone()),                   // → Bravo
+        ("forward", fwd.clone()),                   // → Charlie
+        ("forward at front (no-op)", fwd.clone()),
+        ("focus Delta (genuine → front)", win("Delta")),
+        ("back", back.clone()),                     // → Charlie
+        ("focus Bravo (o/i case: flipped-through → refocus reorders)", win("Bravo")),
+        ("back", back.clone()),                     // → Delta (proves Bravo went to front)
+        ("back session (no session → no-op)", back_session),
+    ];
+
+    let mut trace = Vec::new();
+    for (label, word) in steps {
+        let landed = say(&lua, &place, word)
+            .map(|w| w["body"]["app"].clone())
+            .unwrap_or(Value::Null);
+        trace.push(json!({ "step": label, "lands_on": landed }));
+    }
+    golden("trail_walk", &serde_json::to_string_pretty(&Value::Array(trace)).unwrap());
+}
+
+// ── the universal picker (Caps f), pinned: town's recent places + the surface's live windows/apps
+// + tmux sessions, merged and deduped, order kept. read the snapshot to check the merge. ──
+#[test]
+fn the_menu_merge_pinned() {
+    let past = json!({ "place": [
+        { "kind": "window", "app": "Chrome" },
+        { "kind": "session", "name": "work" },
+        { "kind": "window", "app": "Slack" },
+    ] });
+    let (lua, menu) = resident("menu", json!({}), past);
+    let live = json!([ // the surface now gathers windows, apps AND sessions
+        { "kind": "window", "app": "Chrome" }, // dups a recent window
+        { "kind": "app", "name": "Linear" },   // new
+        { "kind": "session", "name": "work" }, // dups the recent session
+        { "kind": "session", "name": "mind" }, // new
+    ]);
+    let show = say(&lua, &menu, json!({ "kind": "everything", "tense": "future", "body": { "places": live } })).unwrap();
+    golden("menu_merge", &serde_json::to_string_pretty(&show["body"]["choices"]).unwrap());
+}
+
+// ── favourites (Caps 1-9): save pins a place; jump recalls it, or falls back to a default. ──
+#[test]
+fn favourites_flow_pinned() {
+    let save = |slot: i32, app: &str|
+        json!({ "kind": "save", "tense": "future", "body": { "slot": slot, "place": { "kind": "window", "app": app } } });
+    let jump = |slot: i32| json!({ "kind": "jump", "tense": "future", "body": { "slot": slot } });
+
+    let mut trace = Vec::new();
+    let (lua, fav) = resident("favourites", json!({}), json!({}));
+    trace.push(json!({ "step": "save 2 = Slack", "result": say(&lua, &fav, save(2, "Slack")) }));
+    let (lua, fav) = resident("favourites", json!({ "favourites": { "2": { "kind": "window", "app": "Slack" } } }), json!({}));
+    trace.push(json!({ "step": "jump 2 (saved)", "result": say(&lua, &fav, jump(2)) }));
+    let (lua, fav) = resident("favourites", json!({}), json!({}));
+    trace.push(json!({ "step": "jump 1 (default)", "result": say(&lua, &fav, jump(1)) }));
+    trace.push(json!({ "step": "jump 9 (unsaved, no default)", "result": say(&lua, &fav, jump(9)) }));
+    golden("favourites_flow", &serde_json::to_string_pretty(&Value::Array(trace)).unwrap());
 }

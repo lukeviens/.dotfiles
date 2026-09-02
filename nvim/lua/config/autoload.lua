@@ -188,29 +188,33 @@ vim.api.nvim_create_autocmd("FileType", {
 
 local theme = require('config.theme').colors
 
--- transparent background overrides (applied after colorscheme loads)
-vim.api.nvim_create_autocmd("ColorScheme", {
-	callback = function()
-		local transparent = {
-			"Normal", "StatusLine", "StatusLineNC", "TabLine", "TabLineFill", "LspProgressNormal",
-			"DiagnosticSignError", "DiagnosticSignWarn", "DiagnosticSignInfo", "DiagnosticSignHint", "DiagnosticSignOk",
-			-- BufferCurrent is owned outright below (bg=NONE + live fg), so it's intentionally not here
-			"BufferCurrentIndex", "BufferCurrentMod", "BufferCurrentSign", "BufferCurrentTarget",
-			"BufferInactive", "BufferInactiveIndex", "BufferInactiveSign",
-			"BufferOffset", "BufferTabpageFill", "BufferTabpages", "BufferVisible", "BufferVisibleIndex",
-			"LineNr", "LineNrAbove", "LineNrBelow", "CursorLineNr", "SignColumn", "FoldColumn", "EndOfBuffer",
-		}
-		for _, group in ipairs(transparent) do
-			local h = vim.api.nvim_get_hl(0, { name = group, link = false }); h.bg, h.ctermbg = nil, nil; vim.api.nvim_set_hl(0, group, h)
-		end
-		-- the current buffer-tab fg must follow the LIVE palette (Caps t) — the `theme` above is
-		-- cached at startup (dark → white), so on a light swap it'd stay white-on-white. Read fresh.
-		local fg = require('config.theme').read().fg or theme.fg
-		vim.api.nvim_set_hl(0, "BufferCurrent", { bg = "NONE", fg = fg })
-	end,
+-- transparent bg overrides. barbar re-sets its Buffer*/TabLine* highlights on ColorScheme; if our
+-- clear runs first its colour wins (the flash + black top bar). So schedule it -- runs after
+-- barbar's sync resetup regardless of order. Buffer-enter only re-renders, so it sticks.
+local function apply_transparent()
+	local transparent = {
+		"Normal", "StatusLine", "StatusLineNC", "LspProgressNormal",
+		"DiagnosticSignError", "DiagnosticSignWarn", "DiagnosticSignInfo", "DiagnosticSignHint", "DiagnosticSignOk",
+		"LineNr", "LineNrAbove", "LineNrBelow", "CursorLineNr", "SignColumn", "FoldColumn", "EndOfBuffer",
+	}
+	-- sweep Buffer*/TabLine* by prefix -- catches the BufferDefault* templates barbar re-derives from,
+	-- and TabLineSel (the black bar). nothing it invents can keep a bg.
+	for _, prefix in ipairs({ "Buffer", "TabLine" }) do
+		vim.list_extend(transparent, vim.fn.getcompletion(prefix, "highlight"))
+	end
+	for _, group in ipairs(transparent) do
+		local h = vim.api.nvim_get_hl(0, { name = group, link = false })
+		h.bg, h.ctermbg = nil, nil
+		vim.api.nvim_set_hl(0, group, h)
+	end
+	-- the current buffer-tab fg follows the LIVE palette (Caps t); read fresh, set last.
+	local fg = require('config.theme').read().fg or theme.fg
+	vim.api.nvim_set_hl(0, "BufferCurrent", { bg = "NONE", fg = fg })
+end
+vim.api.nvim_create_autocmd({ "ColorScheme", "VimEnter" }, {
+	callback = function() vim.schedule(apply_transparent) end,
 })
--- trigger it now for the current colorscheme
-vim.cmd("doautocmd ColorScheme")
+vim.schedule(apply_transparent)
 
 -- Follow the town palette live when ~/.config/theme/colors changes (Caps t), so nvim re-themes
 -- with the whole desktop. HYBRID: the four NAMED themes use handcrafted schemes (max polish);

@@ -126,6 +126,16 @@ function M.report_front()
   end
 end
 
+-- tmux sessions, async (never a UI-thread spawn) — the terminal half of the picker's live list.
+local function session_places(cb)
+  local t = hs.task.new("/bin/sh", function(_, out)
+    local places = {}
+    for name in (out or ""):gmatch("[^\r\n]+") do places[#places + 1] = { kind = "session", name = name } end
+    cb(places)
+  end, { "-c", TX .. " list-sessions -F '#{session_name}' 2>/dev/null" })
+  t:start()
+end
+
 function M.start(bus)
   town = bus
 
@@ -141,15 +151,20 @@ function M.start(bus)
   winfilter:subscribe({ hs.window.filter.windowCreated, hs.window.filter.windowDestroyed },
     function() win_cache = nil end)
 
-  -- town owns the pickers; only the app/window lists are HS's to gather, on request.
+  -- town owns the pickers; the surface gathers the live app/window/session lists on request.
   town.listen("gather", function(w)
     local what = w.body.what
     if what == "apps" then town.talk("apps", { places = app_places() }, "past")
     elseif what == "windows" then town.talk("windows", { places = window_places() }, "past")
+    elseif what == "sessions" then
+      session_places(function(s) town.talk("sessions", { places = s }, "past") end)
     elseif what == "all" then                                      -- the universal picker's live half
       local all = window_places()
       for _, p in ipairs(app_places()) do all[#all + 1] = p end
-      town.talk("everything", { places = all }, "past")
+      session_places(function(s)                                   -- sessions arrive async, then talk
+        for _, p in ipairs(s) do all[#all + 1] = p end
+        town.talk("everything", { places = all }, "past")
+      end)
     end
   end)
 

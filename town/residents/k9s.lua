@@ -45,9 +45,8 @@ local function write_skin(bg, fg)
   if f then f:write(s); f:close() end
 end
 
--- self-heal on boot: the skin is generated + git-ignored, so a fresh clone won't have it. If it's
--- missing, write it from the current palette now, so k9s is themed before the first Caps-t (theme
--- changes keep it current after that). Mirrors the theme resident self-healing theme/colors.
+-- self-heal: the skin is generated + git-ignored, so a fresh clone lacks it. write it from the
+-- current palette if missing, so k9s is themed before the first Caps-t.
 local have = io.open(SKIN, "r")
 if have then have:close()
 else
@@ -58,9 +57,6 @@ else
   end
 end
 
-return {
-  listen = { "theme" },
-  talk = function(w)
-    if w.kind == "theme" and w.body.bg then write_skin(w.body.bg, w.body.fg) end
-  end,
+return react {
+  on("theme", function(w) if w.body.bg then write_skin(w.body.bg, w.body.fg) end end),
 }

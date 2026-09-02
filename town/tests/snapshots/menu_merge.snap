@@ -1,0 +1,32 @@
+[
+  {
+    "app": "Slack",
+    "id": "1",
+    "kind": "window",
+    "label": "Slack"
+  },
+  {
+    "app": "work",
+    "id": "2",
+    "kind": "session",
+    "label": "work  ·  session"
+  },
+  {
+    "app": "Chrome",
+    "id": "3",
+    "kind": "window",
+    "label": "Chrome"
+  },
+  {
+    "app": "Linear",
+    "id": "4",
+    "kind": "app",
+    "label": "Linear"
+  },
+  {
+    "app": "mind",
+    "id": "5",
+    "kind": "session",
+    "label": "mind  ·  session"
+  }
+]

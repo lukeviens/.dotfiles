@@ -6,3 +6,4 @@ pub mod town;
 pub mod residents;
 pub mod square;
 pub mod paths;
+pub mod scrub;

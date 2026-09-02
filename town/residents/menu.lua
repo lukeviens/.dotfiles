@@ -1,9 +1,8 @@
 -- menu — the UI as words. A `pick` becomes a `show`; a `chose` becomes going there;
--- a `favourite` pins the choice. town decides what to show and what a pick means; HS
--- only renders labels and reports ids. Places come from town's own past, sessions it
--- gathers itself, apps/windows it asks the surface to `gather`. Every choice is a
--- place, so choosing one is just `place`(future) — which the owning surface obeys.
-local TX = bins.tmux
+-- a `favourite` pins the choice. town decides what to show and what a pick means; the surface
+-- renders labels, reports ids, and gathers the live lists (apps/windows/sessions) on request.
+-- Recent places come from town's own past. Every choice is a place, so choosing one is just
+-- `place`(future) — which the owning surface obeys.
 local shown = {}
 
 local function label(p)
@@ -27,15 +26,6 @@ local function recent(places)        -- most-recent-first (everywhere() dedups b
   return out
 end
 
-local function sessions()            -- town gathers these itself
-  local out, raw = {}, io.popen(TX .. " list-sessions -F '#{session_name}' 2>/dev/null")
-  if raw then
-    for name in raw:lines() do out[#out + 1] = { kind = "session", name = name } end
-    raw:close()
-  end
-  return out
-end
-
 local function pkey(p)               -- identity: titled windows differ by title; a
   if p.kind == "window" then         -- titleless window is just "the app", so it folds
     local t = p.title                -- into the app entry. others by name.
@@ -45,13 +35,12 @@ local function pkey(p)               -- identity: titled windows differ by title
   return (p.kind or "") .. ":" .. (p.app or p.name or "")
 end
 
--- the universal list: town's recent places first (where you go), then HS's live windows
--- and apps, then sessions — deduped, order kept. one search over everything.
+-- the universal list: town's recent places first (where you go), then the surface's live
+-- windows, apps, and sessions — deduped, order kept. one search over everything.
 local function everywhere(live)
   local all = {}
   for _, p in ipairs(recent(past("place"))) do all[#all + 1] = p end
   for _, p in ipairs(live or {}) do all[#all + 1] = p end
-  for _, p in ipairs(sessions()) do all[#all + 1] = p end
   local out, seen = {}, {}
   for _, p in ipairs(all) do
     local k = pkey(p)
@@ -60,23 +49,18 @@ local function everywhere(live)
   return out
 end
 
-return {
-  listen = { "pick", "apps", "windows", "everything", "chose", "favourite" },
-  talk = function(w)
-    if w.kind == "pick" then
-      local what = w.body.what
-      if what == "sessions" then return menu(sessions()) end
-      return intent("gather", { what = what })                               -- apps/windows: ask the surface
-    elseif w.kind == "apps" or w.kind == "windows" then
-      return menu(w.body.places or {})                                       -- the surface gathered them
-    elseif w.kind == "everything" then
-      return menu(everywhere(w.body.places))                                 -- HS's live list + town's places & sessions
-    elseif w.kind == "chose" then
-      local p = shown[tonumber(w.body.id)]
-      if p then return intent("place", p) end
-    elseif w.kind == "favourite" then
-      local p = shown[tonumber(w.body.id)]
-      if p then return intent("save", { slot = w.body.slot, place = p }) end
-    end
-  end,
+return react {
+  on("pick", function(w) return intent("gather", { what = w.body.what }) end),   -- ask the surface
+  on("apps", function(w) return menu(w.body.places or {}) end),       -- the surface gathered them
+  on("windows", function(w) return menu(w.body.places or {}) end),
+  on("sessions", function(w) return menu(w.body.places or {}) end),
+  on("everything", function(w) return menu(everywhere(w.body.places)) end),  -- live list + town's places & sessions
+  on("chose", function(w)
+    local p = shown[tonumber(w.body.id)]
+    if p then return intent("place", p) end
+  end),
+  on("favourite", function(w)
+    local p = shown[tonumber(w.body.id)]
+    if p then return intent("save", { slot = w.body.slot, place = p }) end
+  end),
 }

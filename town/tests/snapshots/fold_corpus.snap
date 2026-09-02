@@ -1,0 +1,74 @@
+{
+  "colors": "# shared palette\nname=dark\nmode=dark\nbg=#1f1d20\nfg=#f8f8f2\nsubtle=#878787\nactive=#f92672\naccent=#66d9ef\nbase00=#1f1d20\nbase01=#3e3c3e\nbase02=#5d5c5c\nbase03=#878787\nbase04=#9b9a98\nbase05=#bab9b6\nbase06=#d9d9d4\nbase07=#f8f8f2\nbase08=#fa4c8b\nbase09=#fa564c\nbase0A=#fa9f4c\nbase0B=#8bfa4c\nbase0C=#4cfaad\nbase0D=#4ce2fa\nbase0E=#824cfa\nbase0F=#fa4c5f\n",
+  "favourites": {
+    "1": {
+      "app": "Chrome",
+      "kind": "window"
+    },
+    "2": {
+      "app": "WezTerm",
+      "kind": "window"
+    },
+    "3": {
+      "app": "Slack",
+      "kind": "window"
+    },
+    "4": {
+      "kind": "app",
+      "name": "Spotify"
+    }
+  },
+  "focus": {
+    "cwd": "/Users/tok_c6334b6/code/tok_2de036d-tok_657528b",
+    "pane": "%143",
+    "socket": "/var/folders/tok_86cdc88/tok_fb120bc/T/nvim.tok_c6334b6/tok_4d64f35/nvim.39109.0"
+  },
+  "gather": {
+    "tense": "tok_5984c2b",
+    "what": "all"
+  },
+  "key": {
+    "at": "leader",
+    "press": "tok_cf0fa26",
+    "tense": "tok_689fe18"
+  },
+  "pick": {
+    "what": "apps"
+  },
+  "ping": {
+    "n": "10",
+    "tense": "tok_5984c2b"
+  },
+  "place": {
+    "app": "Slack",
+    "kind": "window"
+  },
+  "theme": {
+    "accent": "#66d9ef",
+    "active": "#f92672",
+    "base00": "#1f1d20",
+    "base01": "#3e3c3e",
+    "base02": "#5d5c5c",
+    "base03": "#878787",
+    "base04": "#9b9a98",
+    "base05": "#bab9b6",
+    "base06": "#d9d9d4",
+    "base07": "#f8f8f2",
+    "base08": "#fa4c8b",
+    "base09": "#fa564c",
+    "base0A": "#fa9f4c",
+    "base0B": "#8bfa4c",
+    "base0C": "#4cfaad",
+    "base0D": "#4ce2fa",
+    "base0E": "#824cfa",
+    "base0F": "#fa4c5f",
+    "bg": "#1f1d20",
+    "fg": "#f8f8f2",
+    "mode": "dark",
+    "name": "dark",
+    "subtle": "#878787"
+  },
+  "wire": {
+    "tense": "tok_5984c2b"
+  }
+}

@@ -1,17 +1,15 @@
 -- lib — the composition vocabulary. Loaded before the residents, so they can be
 -- written as intentions, maps, and trails rather than raw folds.
 
--- the three tenses, each with one constructor, so NO resident ever hand-types a `tense` string
--- (a typo'd tense silently deserializes to nothing — the worst failure in a word-VM):
---   intent(kind, body, label) — a FUTURE word you mean to talk (`label` is hint-only, ignored
---                               when talked); fact(kind, body) — a PRESENT fact; event — a PAST event.
+-- the three tenses, one constructor each, so no resident hand-types a `tense` string (a typo'd
+-- tense silently deserializes to nothing). intent = future, fact = present, event = past.
+-- (`label` on intent is hint-only, ignored when talked.)
 function intent(kind, body, label) return { kind = kind, tense = "future",  body = body, label = label } end
 function fact(kind, body)          return { kind = kind, tense = "present", body = body } end
 function event(kind, body)         return { kind = kind, tense = "past",    body = body } end
 
--- palette(text): parse the shared colours file (key=value lines, # comments, blanks) into a table.
--- The one WITHIN-engine copy — theme + k9s both read it. Other surfaces parse it in their own
--- runtimes (see the header of ~/.config/theme/colors for the shared contract).
+-- palette(text): parse the shared colours file (key=value, # comments) into a table. theme + k9s
+-- both use this; other surfaces parse it in their own runtimes.
 function palette(text)
   local c = {}
   for line in text:gmatch("[^\r\n]+") do
@@ -96,13 +94,40 @@ function keymap(map)
   }
 end
 
--- when(kind, action): react to any word of `kind`. `action` is a word to talk, or a
--- function of the heard word that returns one (or nil).
-function when(kind, action)
+-- on: a talk clause — match a word by kind (+ optional tense / body predicate), run act(w).
+--   on("colors", fn)  ·  on({ kind = "place", tense = "future", where = fn(body) }, fn)
+function on(spec, act)
+  if type(spec) == "string" then spec = { kind = spec } end
   return {
-    listen = { kind },
-    talk = function(w) if type(action) == "function" then return action(w) else return action end end,
+    kind = spec.kind,
+    match = function(w)
+      if spec.kind and w.kind ~= spec.kind then return false end
+      if spec.tense and (w.tense or "present") ~= spec.tense then return false end
+      if spec.where and not spec.where(w.body) then return false end
+      return true
+    end,
+    act = act,
   }
+end
+
+-- react: a resident from `on` clauses. `listen` is derived from the clause kinds; `talk` runs the
+-- first matching clause. Add `watch` (or other fields) to the returned table after, if needed.
+function react(list)
+  local listen, seen = {}, {}
+  for _, c in ipairs(list) do
+    if c.kind and not seen[c.kind] then seen[c.kind] = true; listen[#listen + 1] = c.kind end
+  end
+  return {
+    listen = listen,
+    talk = function(w)
+      for _, c in ipairs(list) do if c.match(w) then return c.act(w) end end
+    end,
+  }
+end
+
+-- when(kind, action): react to a kind. `action` is a word to talk, or a fn of the word returning one.
+function when(kind, action)
+  return react { on(kind, type(action) == "function" and action or function() return action end) }
 end
 
 -- trail: the recent places of a kind, walked — like ⌘-tab / vim `:bnext`. A present fact of

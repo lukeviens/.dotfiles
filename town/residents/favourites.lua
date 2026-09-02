@@ -7,17 +7,16 @@ local DEFAULTS = {
   ["3"] = { kind = "window", app = "Slack" },
   ["4"] = { kind = "window", app = "Spotify" },
 }
-return {
-  listen = { "save", "jump" },
-  talk = function(w)
+return react {
+  on("save", function(w)
     local faves = present("favourites") or {}
-    if w.kind == "save" then
-      faves[tostring(w.body.slot)] = w.body.place
-      return fact("favourites", faves)
-    elseif w.kind == "jump" then
-      local slot = tostring(w.body.slot)
-      local p = faves[slot] or DEFAULTS[slot]   -- your pin, else the default
-      if p then return intent("place", p) end
-    end
-  end,
+    faves[tostring(w.body.slot)] = w.body.place
+    return fact("favourites", faves)
+  end),
+  on("jump", function(w)
+    local faves = present("favourites") or {}
+    local slot = tostring(w.body.slot)
+    local p = faves[slot] or DEFAULTS[slot]   -- your pin, else the default
+    if p then return intent("place", p) end
+  end),
 }

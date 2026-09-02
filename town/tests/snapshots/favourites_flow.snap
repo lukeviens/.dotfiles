@@ -1,0 +1,41 @@
+[
+  {
+    "result": {
+      "body": {
+        "2": {
+          "app": "Slack",
+          "kind": "window"
+        }
+      },
+      "kind": "favourites",
+      "tense": "present"
+    },
+    "step": "save 2 = Slack"
+  },
+  {
+    "result": {
+      "body": {
+        "app": "Slack",
+        "kind": "window"
+      },
+      "kind": "place",
+      "tense": "future"
+    },
+    "step": "jump 2 (saved)"
+  },
+  {
+    "result": {
+      "body": {
+        "app": "WezTerm",
+        "kind": "window"
+      },
+      "kind": "place",
+      "tense": "future"
+    },
+    "step": "jump 1 (default)"
+  },
+  {
+    "result": null,
+    "step": "jump 9 (unsaved, no default)"
+  }
+]

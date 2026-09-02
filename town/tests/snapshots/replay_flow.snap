@@ -1,0 +1,88 @@
+{
+  "effects": [
+    {
+      "content": "# Auto-written by town on theme change (Caps t). Colours from ~/.config/theme/colors.\nk9s:\n  frame:\n    crumbs:\n      bgColor: \"#1f1d20\"\n    title:\n      bgColor: \"#1f1d20\"\n    header:\n      bgColor: default\n      fgColor: \"#f8f8f2\"\n  views:\n    charts:\n      bgColor: default\n    table:\n      bgColor: default\n      header:\n        bgColor: default\n        fgColor: \"#f8f8f2\"\n    xray:\n      bgColor: default\n    logs:\n      bgColor: default\n    yaml:\n      bgColor: default\n  body:\n    bgColor: default\n  prompt:\n    bgColor: default\n  info:\n    bgColor: default\n  dialog:\n    bgColor: default\n",
+      "kind": "write",
+      "path": "/Users/lukeviens/.config/k9s/skins/luke.yaml"
+    },
+    {
+      "cmd": "/opt/homebrew/bin/tmux set -g @color_bg '#1f1d20'",
+      "kind": "exec"
+    },
+    {
+      "cmd": "/opt/homebrew/bin/tmux set -g @color_fg '#f8f8f2'",
+      "kind": "exec"
+    },
+    {
+      "cmd": "/opt/homebrew/bin/tmux set -g @color_subtle '#878787'",
+      "kind": "exec"
+    },
+    {
+      "cmd": "/opt/homebrew/bin/tmux set -g @color_active '#f92672'",
+      "kind": "exec"
+    },
+    {
+      "cmd": "/opt/homebrew/bin/tmux set -g @color_accent '#66d9ef'",
+      "kind": "exec"
+    },
+    {
+      "cmd": "/opt/homebrew/bin/tmux set -g @color_active_bg '#1f1d20'",
+      "kind": "exec"
+    },
+    {
+      "cmd": "/opt/homebrew/bin/tmux set -g @color_active_fg '#f92672'",
+      "kind": "exec"
+    },
+    {
+      "cmd": "/opt/homebrew/bin/tmux refresh-client -S 2>/dev/null",
+      "kind": "exec"
+    }
+  ],
+  "present": {
+    "colors": "# shared palette\nname=dark\nmode=dark\nbg=#1f1d20\nfg=#f8f8f2\nsubtle=#878787\nactive=#f92672\naccent=#66d9ef\n",
+    "place": {
+      "kind": "session",
+      "name": "work"
+    },
+    "theme": {
+      "accent": "#66d9ef",
+      "active": "#f92672",
+      "bg": "#1f1d20",
+      "fg": "#f8f8f2",
+      "mode": "dark",
+      "name": "dark",
+      "subtle": "#878787"
+    }
+  },
+  "talkbacks": [
+    {
+      "body": {
+        "accent": "#66d9ef",
+        "active": "#f92672",
+        "bg": "#1f1d20",
+        "fg": "#f8f8f2",
+        "mode": "dark",
+        "name": "dark",
+        "subtle": "#878787"
+      },
+      "kind": "theme",
+      "tense": "present"
+    },
+    {
+      "body": {
+        "app": "Chrome",
+        "kind": "window"
+      },
+      "kind": "place",
+      "tense": "future"
+    },
+    {
+      "body": {
+        "app": "WezTerm",
+        "kind": "window"
+      },
+      "kind": "place",
+      "tense": "future"
+    }
+  ]
+}

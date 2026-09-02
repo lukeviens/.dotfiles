@@ -3,14 +3,49 @@
 //! io.popen, io.open, os.time, math.random) becomes a deterministic recording fake — so a resident
 //! test never touches the real machine, and effects (shell commands, file writes) become golden.
 
-use mlua::{Lua, LuaSerdeExt, Table, Value as LuaValue};
+#![allow(dead_code)] // shared across test binaries; each uses a subset
+
+use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
+
+use mlua::{Function, Lua, LuaSerdeExt, Table, Value as LuaValue};
 use serde_json::{json, Value};
 
 pub const ROOT: &str = env!("CARGO_MANIFEST_DIR");
 
-// Install the hermetic sandbox. Recorded effects land in the global `EFFECTS`; io.popen/io.open
-// reads serve canned text from `WORLD` (populate via feed_popen / feed_file). Time and RNG are
-// pinned so even the random-theme path is snapshotable.
+/// A dependency-free expect-test: compare `actual` against tests/snapshots/<name>.snap. Set
+/// `UPDATE=1` to (re)write the snapshot; commit the .snap. A drift fails with a diff hint.
+pub fn golden(name: &str, actual: &str) {
+    let path = format!("{ROOT}/tests/snapshots/{name}.snap");
+    if std::env::var("UPDATE").is_ok() {
+        std::fs::create_dir_all(format!("{ROOT}/tests/snapshots")).unwrap();
+        std::fs::write(&path, actual).unwrap();
+        return;
+    }
+    let expected = std::fs::read_to_string(&path)
+        .unwrap_or_else(|_| panic!("no snapshot at {path} — run `UPDATE=1 cargo test` to create it"));
+    assert!(
+        actual == expected,
+        "snapshot `{name}` drifted — re-run with UPDATE=1 if intended.\n\
+         first difference around:\n{}",
+        first_diff(&expected, actual)
+    );
+}
+
+fn first_diff(a: &str, b: &str) -> String {
+    let at = a.char_indices().zip(b.chars()).find(|((_, x), y)| x != y).map(|((i, _), _)| i);
+    let at = at.unwrap_or(a.len().min(b.len()));
+    let lo = at.saturating_sub(80);
+    format!("  expected: …{}…\n  actual:   …{}…", snippet(a, lo, at + 80), snippet(b, lo, at + 80))
+}
+
+fn snippet(s: &str, lo: usize, hi: usize) -> String {
+    s.chars().skip(lo).take(hi - lo).collect()
+}
+
+// Hermetic sandbox: effects land in `EFFECTS`, io.popen/io.open reads serve canned `WORLD` text
+// (feed_popen/feed_file), time + RNG pinned so even the random-theme path snapshots.
 fn sandbox(lua: &Lua) {
     lua.load(
         r#"
@@ -76,8 +111,11 @@ pub fn resident(name: &str, present: Value, past: Value) -> (Lua, Table) {
     lua.globals()
         .set(
             "present",
-            lua.create_function(move |lua, kind: String| {
-                lua.to_value(p.get(&kind).unwrap_or(&Value::Null))
+            // absent (or JSON null) → real Lua nil, NOT mlua's truthy null-sentinel, so residents'
+            // `present(x) or default` works exactly as it does against the real engine.
+            lua.create_function(move |lua, kind: String| match p.get(&kind) {
+                Some(v) if !v.is_null() => lua.to_value(v),
+                _ => Ok(LuaValue::Nil),
             })
             .unwrap(),
         )
@@ -117,6 +155,86 @@ pub fn say(lua: &Lua, spec: &Table, word: Value) -> Option<Value> {
             }))
         }
     }
+}
+
+/// Fold a word sequence through every resident under the sandbox — the tokio engine's loop, but
+/// synchronous. Facts fold into an evolving present/past the residents read; each word goes to its
+/// listeners; talkbacks + captured effects (writes, commands) come back as `{present, talkbacks,
+/// effects}`. First-level dispatch only — the real log already carries talkbacks as their own
+/// facts, so no recursion (and no loop risk).
+pub fn replay(words: &[Value]) -> Value {
+    let lua = Lua::new();
+    sandbox(&lua);
+
+    let present: Rc<RefCell<serde_json::Map<String, Value>>> = Rc::new(RefCell::new(Default::default()));
+    let past: Rc<RefCell<HashMap<String, Vec<Value>>>> = Rc::new(RefCell::new(HashMap::new()));
+
+    let p = present.clone();
+    lua.globals()
+        .set("present", lua.create_function(move |lua, kind: String| match p.borrow().get(&kind) {
+            Some(v) if !v.is_null() => lua.to_value(v),
+            _ => Ok(LuaValue::Nil), // real nil, not the truthy null-sentinel
+        }).unwrap())
+        .unwrap();
+    let q = past.clone();
+    lua.globals()
+        .set("past", lua.create_function(move |lua, kind: String| {
+            lua.to_value(&Value::Array(q.borrow().get(&kind).cloned().unwrap_or_default()))
+        }).unwrap())
+        .unwrap();
+    lua.globals().set("reopen", lua.create_function(|_, ()| Ok(())).unwrap()).unwrap();
+
+    lua.load(&std::fs::read_to_string(format!("{ROOT}/lib.lua")).unwrap()).set_name("lib").exec().unwrap();
+
+    // load every resident, indexed by the kinds it listens for
+    let mut listeners: Vec<(HashSet<String>, Function)> = Vec::new();
+    let mut files: Vec<_> = std::fs::read_dir(format!("{ROOT}/residents"))
+        .unwrap()
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("lua"))
+        .collect();
+    files.sort();
+    for path in files {
+        let src = std::fs::read_to_string(&path).unwrap();
+        let spec: Table = lua.load(&src).set_name(path.to_str().unwrap()).eval().unwrap();
+        let kinds: HashSet<String> = spec
+            .get::<Table>("listen")
+            .map(|t| t.sequence_values::<String>().filter_map(Result::ok).collect())
+            .unwrap_or_default();
+        if let Ok(talk) = spec.get::<Function>("talk") {
+            listeners.push((kinds, talk));
+        }
+    }
+    lua.load("EFFECTS = {}").exec().unwrap(); // drop load-time self-heal effects (theme/k9s)
+
+    let mut talkbacks: Vec<Value> = Vec::new();
+    for w in words {
+        let kind = w["kind"].as_str().unwrap_or("").to_string();
+        let tense = w.get("tense").and_then(Value::as_str).unwrap_or("present");
+        if tense == "present" && !kind.is_empty() {
+            present.borrow_mut().insert(kind.clone(), w["body"].clone());
+            past.borrow_mut().entry(kind.clone()).or_default().push(w["body"].clone());
+        }
+        for (kinds, talk) in &listeners {
+            if kinds.contains(&kind) {
+                let heard = lua.to_value(w).unwrap();
+                match talk.call::<LuaValue>(heard) {
+                    Ok(said) if !said.is_nil() => {
+                        let out: Value = lua.from_value(said).unwrap();
+                        talkbacks.push(json!({
+                            "kind": out["kind"],
+                            "tense": out.get("tense").cloned().unwrap_or(json!("present")),
+                            "body": out.get("body").cloned().unwrap_or(Value::Null),
+                        }));
+                    }
+                    Ok(_) => {} // said nothing
+                    Err(e) => eprintln!("replay: resident errored on '{kind}': {e}"),
+                }
+            }
+        }
+    }
+
+    json!({ "present": Value::Object(present.borrow().clone()), "talkbacks": talkbacks, "effects": effects(&lua) })
 }
 
 /// The side effects a resident performed, in order — `{kind:"exec"|"write", ...}`.

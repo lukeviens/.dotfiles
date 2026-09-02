@@ -1,0 +1,58 @@
+[
+  {
+    "lands_on": null,
+    "step": "focus Alpha"
+  },
+  {
+    "lands_on": null,
+    "step": "focus Bravo"
+  },
+  {
+    "lands_on": null,
+    "step": "focus Charlie"
+  },
+  {
+    "lands_on": "Bravo",
+    "step": "back"
+  },
+  {
+    "lands_on": "Alpha",
+    "step": "back"
+  },
+  {
+    "lands_on": null,
+    "step": "echo Alpha (flip's own echo — swallow)"
+  },
+  {
+    "lands_on": "Bravo",
+    "step": "forward"
+  },
+  {
+    "lands_on": "Charlie",
+    "step": "forward"
+  },
+  {
+    "lands_on": null,
+    "step": "forward at front (no-op)"
+  },
+  {
+    "lands_on": null,
+    "step": "focus Delta (genuine → front)"
+  },
+  {
+    "lands_on": "Charlie",
+    "step": "back"
+  },
+  {
+    "lands_on": null,
+    "step": "focus Bravo (o/i case: flipped-through → refocus reorders)"
+  },
+  {
+    "lands_on": "Delta",
+    "step": "back"
+  },
+  {
+    "lands_on": null,
+    "step": "back session (no session → no-op)"
+  }
+]

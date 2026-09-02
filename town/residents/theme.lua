@@ -107,15 +107,12 @@ end
 local have = io.open(COLORS, "r")
 if have then have:close() else write(skins[1]) end
 
-return {
-  watch  = { colors = COLORS },
-  listen = { "colors", "theme" },
-  talk   = function(w)
-    if w.kind == "colors" then
-      return fact("theme", palette(w.body))   -- file changed → broadcast the palette
-    elseif w.kind == "theme" and w.tense == "future" then
-      if w.body.to == "random" then write(random_skin())  -- Caps ⇧T → a fresh random palette
-      else write(skins[current() % #skins + 1]) end        -- Caps t → the next palette, wrapping
-    end
-  end,
+local r = react {
+  on("colors", function(w) return fact("theme", palette(w.body)) end),   -- file changed → broadcast the palette
+  on({ kind = "theme", tense = "future" }, function(w)
+    if w.body.to == "random" then write(random_skin())   -- Caps ⇧T → a fresh random palette
+    else write(skins[current() % #skins + 1]) end         -- Caps t → the next palette, wrapping
+  end),
 }
+r.watch = { colors = COLORS }   -- the engine watches this file and talks `colors` on change
+return r
