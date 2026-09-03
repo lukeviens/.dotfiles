@@ -2,6 +2,7 @@
 -- (cached; icons resolve lazily), dresses town's raw choices with icons for the picker, reports
 -- the focused thing as a present `place`, and obeys a future `place` by focusing that window.
 local M = {}
+local sh = require("sh")
 
 local HOME = os.getenv("HOME")
 local watchers = {}   -- anchor the app-dir pathwatchers (module-rooted via M.stop) so they live
@@ -115,12 +116,11 @@ function M.report_front()
     -- most-recently-active client, i.e. the wrong window). Queried ASYNC via hs.task: a blocking
     -- hs.execute here spawned a process on the UI thread on EVERY terminal focus — the exact
     -- per-event stall the persistent bus exists to prevent. Talk the place from the callback.
-    local t = hs.task.new("/bin/sh", function(_, out)
+    sh(TX .. " list-clients -F '#{client_session}' 2>/dev/null", function(_, out)
       local s = out and out:match("[^\r\n]+")
       if s then town.talk("place", { kind = "session", name = s })
       else town.talk("place", { kind = "window", app = name }) end   -- no tmux → the window itself
-    end, { "-c", TX .. " list-clients -F '#{client_session}' 2>/dev/null" })
-    t:start()
+    end)
   else
     town.talk("place", { kind = "window", app = name })
   end
@@ -128,12 +128,11 @@ end
 
 -- tmux sessions, async (never a UI-thread spawn) — the terminal half of the picker's live list.
 local function session_places(cb)
-  local t = hs.task.new("/bin/sh", function(_, out)
+  sh(TX .. " list-sessions -F '#{session_name}' 2>/dev/null", function(_, out)
     local places = {}
     for name in (out or ""):gmatch("[^\r\n]+") do places[#places + 1] = { kind = "session", name = name } end
     cb(places)
-  end, { "-c", TX .. " list-sessions -F '#{session_name}' 2>/dev/null" })
-  t:start()
+  end)
 end
 
 function M.start(bus)

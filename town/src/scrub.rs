@@ -38,7 +38,7 @@ pub struct Scrubber {
 }
 
 impl Scrubber {
-    pub fn new(salt: [u8; 16], _user: String) -> Self {
+    pub fn new(salt: [u8; 16]) -> Self {
         Scrubber { salt, safe: SAFE.iter().copied().collect(), codebook: BTreeMap::new() }
     }
 
@@ -128,7 +128,7 @@ mod tests {
     use serde_json::json;
 
     fn scrubber() -> Scrubber {
-        Scrubber::new([7u8; 16], "lukeviens".into())
+        Scrubber::new([7u8; 16])
     }
     fn word(kind: &str, body: Value) -> Word {
         Word { kind: kind.into(), tense: crate::word::Tense::Present, body }

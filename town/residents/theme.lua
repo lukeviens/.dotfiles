@@ -83,29 +83,28 @@ local function random_skin()
 end
 
 local function current()   -- the skin the file holds now — by its name, else by matching bg
-  local f = io.open(COLORS, "r"); if not f then return 1 end
-  local p = palette(f:read("*a")); f:close()
+  local text = slurp(COLORS); if not text then return 1 end
+  local p = palette(text)
   for i, s in ipairs(skins) do
     if s.name == p.name or (not p.name and s.bg == p.bg) then return i end
   end
   return 1
 end
 
-local function write(s)    -- write a palette to the shared file; the watch does the rest
-  local f = io.open(COLORS, "w"); if not f then return end
-  f:write("# shared palette\n")
+local function render(s)   -- the shared-file text for a skin: the 5 palette keys + the derived base16
+  local out = { "# shared palette" }
   for _, k in ipairs({ "name", "mode", "bg", "fg", "subtle", "active", "accent" }) do
-    f:write(k .. "=" .. s[k] .. "\n")
+    out[#out + 1] = k .. "=" .. s[k]
   end
-  local b = base16(s)   -- + the derived 16-colour scheme, for WezTerm's ANSI + nvim's generator
-  for i = 0, 15 do f:write(string.format("base%02X=%s\n", i, b[i])) end
-  f:close()
+  local b = base16(s)      -- + the 16-colour scheme, for WezTerm's ANSI + nvim's generator
+  for i = 0, 15 do out[#out + 1] = string.format("base%02X=%s", i, b[i]) end
+  return table.concat(out, "\n") .. "\n"
 end
+local function write(s) emit(COLORS, render(s)) end   -- write a palette; the watch does the rest
 
--- single source of truth: if the shared file is ever missing, regenerate it from the catalog,
--- so every surface can just read the file (no hardcoded fallbacks anywhere else).
-local have = io.open(COLORS, "r")
-if have then have:close() else write(skins[1]) end
+-- single source of truth: regenerate the shared file from the catalog if it's ever missing, so
+-- every surface can just read it (no hardcoded fallbacks anywhere else).
+heal(COLORS, function() return render(skins[1]) end)
 
 local r = react {
   on("colors", function(w) return fact("theme", palette(w.body)) end),   -- file changed → broadcast the palette

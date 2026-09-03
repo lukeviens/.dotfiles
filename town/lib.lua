@@ -19,6 +19,20 @@ function palette(text)
   return c
 end
 
+-- file helpers for the "surface reads a substrate town writes" shape (theme, k9s): read a whole file
+-- (nil if absent), write one best-effort, and regenerate a git-ignored file from make() if missing.
+function slurp(path)
+  local f = io.open(path, "r"); if not f then return nil end
+  local s = f:read("*a"); f:close(); return s
+end
+function emit(path, text)
+  local f = io.open(path, "w"); if not f then return end
+  f:write(text); f:close()
+end
+function heal(path, make)
+  if not slurp(path) then local t = make(); if t then emit(path, t) end end
+end
+
 -- bins: absolute paths to the CLIs the connector residents shell out to — one source per binary,
 -- this runtime. (The Hammerspoon surface keeps its own copy; it's a separate process.)
 bins = { tmux = "/opt/homebrew/bin/tmux", nvim = "/opt/homebrew/bin/nvim" }
@@ -34,20 +48,22 @@ function grep()        return intent("grep", nil, "grep") end
 -- shared colours file; every surface re-colours off that one file. (A future `theme` — an intent.)
 function retheme(to, label) return intent("theme", { to = to or "next" }, label or "theme") end
 
--- act: a key the surface binds directly to one of its own actions (a chord, bound at
--- the surface for speed — not routed as a word on every press). always-on everywhere.
-function act(name) return { act = name } end
-
--- aware: like act, but context-aware — the surface disables it wherever the terminal
+-- aware: a key the surface binds directly to its own action (a chord, for speed — not routed as a
+-- word per press); context-aware — the surface disables it wherever the terminal
 -- wants that key (nvim/tmux own ⌃hjkl / ⌃⏎ there) and forwards `move` at its edge.
 function aware(name) return { act = name, aware = true } end
 
+-- surface: a key the surface handles entirely on its own (a local mode or gesture, not a routed
+-- word) — declared here ONLY so it shows in the hint. keeps the map the whole doc even for keys
+-- whose mechanism lives in the surface (e.g. HS's resize sub-mode, hjkl glide inside the terminal).
+function surface(label) return { surface = true, label = label } end
+
 -- move: shift focus one window in a direction. the surface obeys; the terminal's
 -- edge-crossing talks the same word, so focus is one vocabulary everywhere.
-function move(dir) return intent("move", { dir = dir }, "focus") end
+function move(dir) return intent("move", { dir = dir }, "point") end
 
--- arrange: position the focused window — `to` is a half (left/right/top/bottom),
--- "max" (maximize ↔ restore), or "fullscreen" (native). the surface owns the geometry.
+-- arrange: position the focused window — `to` is "max" (maximize ↔ restore, fill the
+-- screen). the surface owns the geometry.
 function arrange(to, label) return intent("arrange", { to = to }, label) end
 
 -- keymap: "<where> <key>" → an intention. Surfaces report keys as `key {at, press}`.
@@ -89,7 +105,7 @@ function keymap(map)
         return event("wiring", { binds = wiring() })
       end
       local v = map[(w.body.at or "") .. " " .. (w.body.press or "")]
-      if v and not v.act then return v end   -- acts are bound directly, never routed here
+      if v and not v.act and not v.surface then return v end   -- acts/surface keys are handled at the surface
     end,
   }
 end

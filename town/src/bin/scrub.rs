@@ -16,8 +16,7 @@ fn main() {
     std::fs::create_dir_all(&fixtures).expect("mkdir fixtures");
 
     let salt = load_or_make_salt(&format!("{fixtures}/.salt"));
-    let user = std::env::var("USER").unwrap_or_default();
-    let mut sc = Scrubber::new(salt, user);
+    let mut sc = Scrubber::new(salt);
 
     let f = std::fs::File::open(&log).unwrap_or_else(|e| panic!("open {log}: {e}"));
     let mut out = String::new();

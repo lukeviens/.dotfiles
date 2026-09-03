@@ -39,11 +39,11 @@ fn a_key_becomes_an_intention() {
     let tmux_i = say(&lua, &keys, json!({"kind":"key","body":{"at":"tmux","press":"i"}})).unwrap();
     assert_eq!(tmux_i, json!({"kind":"forward","tense":"future","body":{"kind":"session"}}));
 
-    // lowercase hjkl moves focus; uppercase HJKL snaps the window
+    // lowercase hjkl moves focus; uppercase HJKL is HS-owned (the "outer" motion), so town never
+    // routes it — a surface key, like the registers.
     let mv = say(&lua, &keys, json!({"kind":"key","body":{"at":"leader","press":"h"}})).unwrap();
     assert_eq!(mv, json!({"kind":"move","tense":"future","body":{"dir":"h"}}));
-    let snap = say(&lua, &keys, json!({"kind":"key","body":{"at":"leader","press":"H"}})).unwrap();
-    assert_eq!(snap, json!({"kind":"arrange","tense":"future","body":{"to":"left"}}));
+    assert_eq!(say(&lua, &keys, json!({"kind":"key","body":{"at":"leader","press":"H"}})), None);
 
     // an unmapped key means nothing
     assert_eq!(say(&lua, &keys, json!({"kind":"key","body":{"at":"leader","press":"x"}})), None);
@@ -58,6 +58,17 @@ fn the_keymap_describes_itself() {
     let items = hints["body"]["items"].as_array().unwrap();
     assert!(items.iter().any(|i| i["keys"] == "f" && i["label"] == "all"));
     assert!(items.iter().any(|i| i["keys"] == "1–9" && i["label"] == "favourites")); // nine jumps collapse
+    // surface-handled keys are still in the ONE doc: the registers (edge/cell), split, and the
+    // inner/outer zoom all derive into the `?` card — no hand-kept menu to drift.
+    // the mesh registers read as one vocabulary — point (hjkl, default) / edge / cell — not "focus".
+    assert!(items.iter().any(|i| i["label"] == "point"));                      // hjkl, the default register
+    assert!(items.iter().any(|i| i["keys"] == "e" && i["label"] == "edge"));   // arm: resize the wall
+    assert!(items.iter().any(|i| i["keys"] == "c" && i["label"] == "cell"));   // arm: carry the tile
+    assert!(items.iter().any(|i| i["label"] == "split"));   // % / "
+    assert!(items.iter().any(|i| i["label"] == "scroll"));  // d / u half-page
+    assert!(items.iter().any(|i| i["label"] == "outer"));   // ⇧hjkl one layer out (Shift = outward)
+    assert!(items.iter().any(|i| i["label"] == "zoom"));    // Caps ⏎ inner
+    assert!(items.iter().any(|i| i["label"] == "full"));   // Caps ⇧⏎ outer
 }
 
 // ── keys: town owns the whole keymap; the surface binds the chords it's handed ─────

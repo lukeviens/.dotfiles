@@ -40,22 +40,15 @@ k9s:
 ]]
 
 local function write_skin(bg, fg)
-  local s = TEMPLATE:gsub("%%BG%%", bg):gsub("%%FG%%", fg)
-  local f = io.open(SKIN, "w")
-  if f then f:write(s); f:close() end
+  emit(SKIN, (TEMPLATE:gsub("%%BG%%", bg):gsub("%%FG%%", fg)))
 end
 
 -- self-heal: the skin is generated + git-ignored, so a fresh clone lacks it. write it from the
 -- current palette if missing, so k9s is themed before the first Caps-t.
-local have = io.open(SKIN, "r")
-if have then have:close()
-else
-  local cf = io.open(COLORS, "r")
-  if cf then
-    local c = palette(cf:read("*a")); cf:close()
-    if c.bg and c.fg then write_skin(c.bg, c.fg) end
-  end
-end
+heal(SKIN, function()
+  local c = palette(slurp(COLORS) or "")
+  if c.bg and c.fg then return (TEMPLATE:gsub("%%BG%%", c.bg):gsub("%%FG%%", c.fg)) end
+end)
 
 return react {
   on("theme", function(w) if w.body.bg then write_skin(w.body.bg, w.body.fg) end end),

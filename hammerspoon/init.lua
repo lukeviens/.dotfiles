@@ -12,6 +12,7 @@ local perf    = require("perf")
 local windows = require("windows")   -- mac window management + chord-binding
 local places  = require("places")    -- app/window lists, decorate, focus report + obey
 local mode    = require("mode")      -- the Caps town-mode (modal + exclusive eventtap)
+local sh      = require("sh")         -- spawn /bin/sh async with HOME+PATH baked in
 local function color(hex) return { hex = hex, alpha = 1.0 } end
 
 -- one in-theme alert style: always a bg fill + a palette stroke; the rest defaults
@@ -52,9 +53,8 @@ town.listen("theme", function(w)
     -- repaint any live interactive zsh prompts that registered themselves (see .zshrc): SIGUSR1
     -- fires their TRAPUSR1, which re-reads the palette and redraws. We only signal a pid that IS a
     -- live zsh (guards against PID reuse) and rm any stale registration as we pass it. Async.
-    hs.task.new("/bin/sh", nil, { "-c",
-      'd="$HOME/.cache/town/shells"; [ -d "$d" ] || exit 0; for f in "$d"/*; do [ -e "$f" ] || continue; ' ..
-      'p=${f##*/}; case "$(ps -p "$p" -o comm= 2>/dev/null)" in *zsh) kill -USR1 "$p" 2>/dev/null;; *) rm -f "$f";; esac; done' }):start()
+    sh('d="$HOME/.cache/town/shells"; [ -d "$d" ] || exit 0; for f in "$d"/*; do [ -e "$f" ] || continue; ' ..
+      'p=${f##*/}; case "$(ps -p "$p" -o comm= 2>/dev/null)" in *zsh) kill -USR1 "$p" 2>/dev/null;; *) rm -f "$f";; esac; done')
   end
   picker.theme(w.body)   -- recolour the live picker webview (Caps f)
   -- and flip the whole Mac: macOS light/dark follows the palette's mode (only when it changes,
@@ -67,11 +67,8 @@ town.listen("theme", function(w)
     -- Claude Code follows too: flip it to the matching ANSI theme so it rides the terminal palette
     -- town themes. Atomic + preserves the rest of settings.json; no-op if jq or the file is absent.
     local ctheme = dark and "dark-ansi" or "light-ansi"
-    local ct = hs.task.new("/bin/sh", nil, { "-c",
-      's="$HOME/.claude/settings.json"; command -v jq >/dev/null 2>&1 || exit 0; [ -f "$s" ] || exit 0; ' ..
-      'tmp=$(mktemp) && jq --arg v "' .. ctheme .. '" \'.theme = $v\' "$s" > "$tmp" && mv "$tmp" "$s"' })
-    ct:setEnvironment({ HOME = HOME, PATH = "/opt/homebrew/bin:/usr/bin:/bin" })
-    ct:start()
+    sh('s="$HOME/.claude/settings.json"; command -v jq >/dev/null 2>&1 || exit 0; [ -f "$s" ] || exit 0; ' ..
+      'tmp=$(mktemp) && jq --arg v "' .. ctheme .. '" \'.theme = $v\' "$s" > "$tmp" && mv "$tmp" "$s"')
   end
 end)
 
@@ -143,7 +140,7 @@ townwatch:start()
 
 -- town-mode: the Caps modal + its exclusive eventtap + the on-screen badge live in mode.lua.
 -- It needs the terminal-glide (windows) and the window-cache warm-up (places) injected.
-mode.start(town, windows.wez_nav, places.list_windows)
+mode.start(town, windows, places.list_windows)
 
 -- ── reload on save (nvim-style DX) — DEBOUNCED. A burst of saves (editing several files
 -- at once) must coalesce into ONE reload: firing hs.reload() per-save interrupts a reload
