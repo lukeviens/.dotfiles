@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SRC="$HOME/.config/zsh/.zshrc"
-DST="$HOME/.zshrc}"
+DST="$HOME/.zshrc"
 
 # ensure source exists
 [ -f "$SRC" ] || { echo "ERROR: missing source: $SRC"; exit 1; }
@@ -16,7 +16,7 @@ fi
 
 # source the config file~
 grep -qxF "source $SRC" "$DST" \
-  || printf "source %s" "$SRC" >> "$DST"
+  || printf "\nsource %s\n" "$SRC" >> "$DST"
 
 echo "sourced $SRC in $DST!"
 

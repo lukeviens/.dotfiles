@@ -153,24 +153,42 @@ end
 -- case is ignored so only a genuinely different focus reorders the list.
 function trail(over, id)
   local seen, at = {}, 1
+  local last            -- the flip in flight {dir, of}: if it lands on a place that's gone, it carries on
   local function key(p) return p and id(p) end
+  local function flip(dir, of)
+    local i = at + dir
+    while seen[i] and of and seen[i].kind ~= of do i = i + dir end
+    if seen[i] then
+      at = i; last = { dir = dir, of = of }         -- move the cursor only — never reorder
+      return intent(over, seen[i])
+    end
+  end
   return {
-    listen = { over, "back", "forward" },
+    listen = { over, "back", "forward", "gone" },
     talk = function(w)
       if w.kind == over then
         if w.tense ~= "present" then return end        -- only facts extend the trail
         if seen[at] and key(w.body) == key(seen[at]) then return end  -- our flip's own echo — hold the cursor
         for i, p in ipairs(seen) do if key(p) == key(w.body) then table.remove(seen, i); break end end
         table.insert(seen, 1, w.body); at = 1          -- a different focus → promote to front, cursor home
-      else
-        local of = w.body and w.body.kind
-        local dir = (w.kind == "back") and 1 or -1
-        local i = at + dir
-        while seen[i] and of and seen[i].kind ~= of do i = i + dir end
-        if seen[i] then
-          at = i                                        -- move the cursor only — never reorder
-          return intent(over, seen[i])
+      elseif w.kind == "gone" then
+        -- a place that is no more (its surface said so): drop it. if it's where the cursor just
+        -- landed, the press that got there hasn't happened yet — carry the flip on past it.
+        local k = key(w.body)
+        for i, p in ipairs(seen) do
+          if key(p) == k then
+            table.remove(seen, i)
+            if i == at and last then
+              at = (last.dir == 1) and i - 1 or i
+              return flip(last.dir, last.of)
+            end
+            if i < at then at = at - 1 end
+            if at < 1 then at = 1 end
+            break
+          end
         end
+      else
+        return flip((w.kind == "back") and 1 or -1, w.body and w.body.kind)
       end
     end,
   }

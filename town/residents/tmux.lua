@@ -14,7 +14,11 @@ return react {
     os.execute(TX .. " refresh-client -S 2>/dev/null")
   end),
   on({ kind = "place", tense = "future", where = function(b) return b.kind == "session" end }, function(w)
-    os.execute(TX .. " switch-client -t '" .. w.body.name .. "' 2>/dev/null")
+    local name = w.body.name   -- `=name`: exact, not a prefix match
+    if not os.execute(TX .. " has-session -t '=" .. name .. "' 2>/dev/null") then
+      return event("gone", w.body)   -- no such session any more: say so, and the trail drops it
+    end
+    os.execute(TX .. " switch-client -t '=" .. name .. "' 2>/dev/null")
     return intent("place", { kind = "window", app = "WezTerm" })  -- raise the terminal too
   end),
 }

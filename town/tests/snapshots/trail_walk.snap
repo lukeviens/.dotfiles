@@ -54,5 +54,21 @@
   {
     "lands_on": null,
     "step": "back session (no session → no-op)"
+  },
+  {
+    "lands_on": "Charlie",
+    "step": "gone Delta (under the cursor → carry on)"
+  },
+  {
+    "lands_on": "Alpha",
+    "step": "back"
+  },
+  {
+    "lands_on": null,
+    "step": "gone Bravo (elsewhere → just dropped)"
+  },
+  {
+    "lands_on": "Charlie",
+    "step": "forward"
   }
 ]

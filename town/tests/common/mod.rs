@@ -59,6 +59,10 @@ fn sandbox(lua: &Lua) {
         end
 
         os.execute = function(cmd) record{ kind = "exec", cmd = cmd }; return true end
+        do   -- one home for every machine, so a path in a golden never names this user
+          local getenv = os.getenv
+          os.getenv = function(k) if k == "HOME" then return "~" end; return getenv(k) end
+        end
         os.time = function() return 0 end
         math.randomseed = function() end
         do

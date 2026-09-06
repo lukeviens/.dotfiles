@@ -353,6 +353,7 @@ fn the_trail_walk_pinned() {
     let back = json!({ "kind": "back", "tense": "future", "body": {} });
     let fwd = json!({ "kind": "forward", "tense": "future", "body": {} });
     let back_session = json!({ "kind": "back", "tense": "future", "body": { "kind": "session" } });
+    let gone = |app: &str| json!({ "kind": "gone", "tense": "past", "body": { "kind": "window", "app": app } });
 
     let steps: Vec<(&str, Value)> = vec![
         ("focus Alpha", win("Alpha")),
@@ -369,6 +370,11 @@ fn the_trail_walk_pinned() {
         ("focus Bravo (o/i case: flipped-through → refocus reorders)", win("Bravo")),
         ("back", back.clone()),                     // → Delta (proves Bravo went to front)
         ("back session (no session → no-op)", back_session),
+        // a place that is no more: dropped. on the cursor → the flip carries on past it.
+        ("gone Delta (under the cursor → carry on)", gone("Delta")),   // → Charlie
+        ("back", back.clone()),                     // → Alpha
+        ("gone Bravo (elsewhere → just dropped)", gone("Bravo")),
+        ("forward", fwd.clone()),                   // → Charlie (Bravo no longer between)
     ];
 
     let mut trace = Vec::new();

@@ -3,7 +3,7 @@
     {
       "content": "# Auto-written by town on theme change (Caps t). Colours from ~/.config/theme/colors.\nk9s:\n  frame:\n    crumbs:\n      bgColor: \"#1f1d20\"\n    title:\n      bgColor: \"#1f1d20\"\n    header:\n      bgColor: default\n      fgColor: \"#f8f8f2\"\n  views:\n    charts:\n      bgColor: default\n    table:\n      bgColor: default\n      header:\n        bgColor: default\n        fgColor: \"#f8f8f2\"\n    xray:\n      bgColor: default\n    logs:\n      bgColor: default\n    yaml:\n      bgColor: default\n  body:\n    bgColor: default\n  prompt:\n    bgColor: default\n  info:\n    bgColor: default\n  dialog:\n    bgColor: default\n",
       "kind": "write",
-      "path": "/Users/lukeviens/.config/k9s/skins/luke.yaml"
+      "path": "~/.config/k9s/skins/luke.yaml"
     },
     {
       "cmd": "/opt/homebrew/bin/tmux set -g @color_bg '#1f1d20'",
