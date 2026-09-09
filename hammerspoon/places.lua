@@ -3,6 +3,7 @@
 -- the focused thing as a present `place`, and obeys a future `place` by focusing that window.
 local M = {}
 local sh = require("sh")
+local chrome = require("chrome")
 
 local HOME = os.getenv("HOME")
 local watchers = {}   -- anchor the app-dir pathwatchers (module-rooted via M.stop) so they live
@@ -162,7 +163,10 @@ function M.start(bus)
       for _, p in ipairs(app_places()) do all[#all + 1] = p end
       session_places(function(s)                                   -- sessions arrive async, then talk
         for _, p in ipairs(s) do all[#all + 1] = p end
-        town.talk("everything", { places = all }, "past")
+        chrome.tabs(function(t)
+          for _, p in ipairs(t) do all[#all + 1] = p end
+          town.talk("everything", { places = all }, "past")
+        end)
       end)
     end
   end)
@@ -170,7 +174,12 @@ function M.start(bus)
   -- HS owns mac focus: enter a window the town means to (a future place), best-effort.
   town.listen("place", function(w)
     local p = w.body
-    if w.tense ~= "future" or not (p.kind == "window" or p.kind == "app") then return end
+    if w.tense ~= "future" then return end
+    if p.kind == "tab" then
+      if p.winId and p.tabIndex then chrome.activate(p.winId, p.tabIndex) end
+      return
+    end
+    if not (p.kind == "window" or p.kind == "app") then return end
     local a = p.app and hs.application.get(p.app)
     if not a then
       if p.app or p.name then hs.application.launchOrFocus(p.app or p.name) end

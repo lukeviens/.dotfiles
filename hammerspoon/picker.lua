@@ -175,6 +175,8 @@ local function build()
         local ok, err = pcall(opts.onSelect, c)  -- a dead window / bad backend can't spew
         if not ok then hs.printf("picker onSelect error: %s", tostring(err)) end
       end
+    elseif body.action == "cancel" and opts.onCancel then
+      pcall(opts.onCancel)
     end
   end)
   local html = HTML

@@ -146,19 +146,11 @@ function when(kind, action)
   return react { on(kind, type(action) == "function" and action or function() return action end) }
 end
 
--- trail: the recent places of a kind, walked — like ⌘-tab / vim `:bnext`. A present fact of
--- `over` promotes that place to the front (most-recent-first, deduped by `id`) and homes the
--- cursor; back/forward flip a cursor through the list of one kind, talking a future `over` for
--- its surface to enter. The walk moves the cursor ONLY — it never reorders. The list reorders
--- solely on a genuinely DIFFERENT present focus, so it stays a plain stack of pointers.
---
--- The catch: a flip focuses a real window/session, and the surface reports that focus straight
--- back as a present fact — the flip's own echo. No surface-side guard can catch all of it (the
--- tmux client-session-changed hook talks the session echo from another process). So the trail
--- drops it where every echo converges: a present fact whose key equals the place the cursor is
--- already parked on (`seen[at]`) IS the echo of what we just flipped to — ignore it. A genuine
--- focus of a different place still reorders. Doubled-echo-proof (both copies match `seen[at]`),
--- and it needs no state beyond the cursor the walk already keeps.
+-- trail: recent places of one kind, walked like ⌘-tab. A present `over` fact promotes that place
+-- to the front (deduped by `id`) and homes the cursor; back/forward step the cursor and talk a
+-- future `over` for the surface to re-enter. A flip's own echo — the surface reporting back the
+-- focus we just caused — arrives as a present fact whose key matches the cursor (`seen[at]`); that
+-- case is ignored so only a genuinely different focus reorders the list.
 function trail(over, id)
   local seen, at = {}, 1
   local function key(p) return p and id(p) end

@@ -32,6 +32,7 @@ end
 
 local HOME     = os.getenv("HOME")
 local watchers = {}   -- anchor pathwatchers so they aren't garbage-collected
+local townwatch, townwarm, wakewatch
 
 -- apps, windows, decorate, focus report + obey all live in places.lua (started below).
 local last_raw = {}   -- the most recent pick's raw choices, so perf can replay a real one
@@ -77,9 +78,11 @@ end)
 -- listener to yield the keyboard, so nothing is forward-declared here.)
 town.listen("show", function(w)
   last_raw = w.body.choices or {}
+  local prevWin = hs.window.focusedWindow()
   picker.show({ placeholder = "go", choices = places.decorate(last_raw),
     onSelect    = function(c) town.talk("chose", { id = c.id }, "past") end,
-    onFavourite = function(c, slot) town.talk("favourite", { slot = slot, id = c.id }, "future") end })
+    onFavourite = function(c, slot) town.talk("favourite", { slot = slot, id = c.id }, "future") end,
+    onCancel    = function() if prevWin then prevWin:focus() end end })
 end)
 
 -- perf: measuring is a word. `town talk future perf` runs the facet suite and diffs it
@@ -138,6 +141,17 @@ townwatch = hs.application.watcher.new(function(_, event)
 end)
 townwatch:start()
 
+-- waking (lid open, screen unlock, or the whole system resuming) shouldn't resurrect any UI state
+-- left over from before sleep — hide the picker and drop Caps-mode back to closed, unconditionally.
+wakewatch = hs.caffeinate.watcher.new(function(event)
+  local W = hs.caffeinate.watcher
+  if event == W.screensDidWake or event == W.systemDidWake or event == W.screensDidUnlock then
+    picker.hide()
+    mode.leave()
+  end
+end)
+wakewatch:start()
+
 -- town-mode: the Caps modal + its exclusive eventtap + the on-screen badge live in mode.lua.
 -- It needs the terminal-glide (windows) and the window-cache warm-up (places) injected.
 mode.start(town, windows, places.list_windows)
@@ -164,6 +178,7 @@ hs.shutdownCallback = function()
   places.stop()    -- window.filter subscription + app-dir pathwatchers
   town.stop()      -- the bus: heartbeat + socket
   if townwatch then townwatch:stop() end   -- the cross-cutting app-activation watcher (orchestrator's)
+  if wakewatch then wakewatch:stop() end   -- the sleep/wake watcher
   if townwarm then townwarm:stop() end     -- the 2s prewarm timer, if a reload beat it
   for _, pw in ipairs(watchers or {}) do pcall(function() pw:stop() end) end -- the reload pathwatcher
 end
@@ -173,6 +188,6 @@ end
 -- first ⌃M f / Caps f opens instantly instead of paying webview-creation + icon-encoding then.
 town.start()
 picker.build()
-townwarm = hs.timer.doAfter(2, function() picker.prewarm(places.list_apps()) end)  -- global, or GC'd before it fires
+townwarm = hs.timer.doAfter(2, function() picker.prewarm(places.list_apps()) end)
 
 hs.alert.show("hammerspoon: loaded", style{ stroke = theme.accent, text = theme.accent }, 1.2)

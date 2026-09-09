@@ -7,6 +7,7 @@ local shown = {}
 
 local function label(p)
   if p.kind == "session" then return p.name .. "  ·  session" end
+  if p.kind == "tab" then return p.title .. "  ·  tab" end
   if p.kind == "window" and p.title and p.title ~= "" then return p.app .. " — " .. p.title end
   return p.app or p.name or "?"
 end
@@ -32,6 +33,7 @@ local function pkey(p)               -- identity: titled windows differ by title
     if t and t ~= "" then return "window:" .. (p.app or "") .. ":" .. t end
     return "app:" .. (p.app or "")
   end
+  if p.kind == "tab" then return "tab:" .. tostring(p.winId) .. ":" .. tostring(p.tabIndex) end
   return (p.kind or "") .. ":" .. (p.app or p.name or "")
 end
 

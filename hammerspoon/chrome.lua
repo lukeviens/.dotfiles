@@ -1,79 +1,61 @@
--- chrome.lua — the on-screen chrome for town-mode: the corner badge (which register you're in + how
--- far OUT, coloured per register) and the on-demand `?` reference card. Pure rendering — mode hands
--- it the state (register, depth, the hint items); chrome owns the canvases + layout.
-local theme = require("theme")
+-- chrome.lua — Google Chrome as a place source: gathers open tabs for the picker (places.lua folds
+-- them into the universal list) and activates one by window id + in-window tab index.
+local sh = require("sh")
 local M = {}
 
--- the badge: a small overlay canvas (NOT the menu bar), same corner every time.
-local bscr = hs.screen.primaryScreen():frame()
-local badge = hs.canvas.new({ x = bscr.x + bscr.w - 138, y = bscr.y + 12, w = 126, h = 30 })
-badge:appendElements(
-  { type = "rectangle", action = "fill", roundedRectRadii = { xRadius = 8, yRadius = 8 },
-    fillColor = { hex = theme.bg, alpha = 0.92 }, strokeColor = { hex = theme.active }, strokeWidth = 1.5 },
-  { type = "text", text = "◆ point", textColor = { hex = theme.active }, textSize = 13,
-    textAlignment = "center", frame = { x = 0, y = 6, w = 126, h = 20 } })
-badge:level(hs.canvas.windowLevels.overlay)
+-- skipped entirely if Chrome isn't running — a bare `tell application` would launch it otherwise.
+-- (ASCII character 9/10, not `tab`/`linefeed` — those bareword constants resolve to Chrome's own
+-- dictionary terms inside its `tell` block, so `&`-ing them in stringifies to the literal words.)
+local LIST_AS = 'tell application "Google Chrome"\n' ..
+  'set out to ""\n' ..
+  'repeat with w in windows\n' ..
+  'set wid to id of w\n' ..
+  'set i to 0\n' ..
+  'repeat with t in tabs of w\n' ..
+  'set i to i + 1\n' ..
+  'set out to out & wid & (ASCII character 9) & i & (ASCII character 9) & (title of t) & (ASCII character 10)\n' ..
+  'end repeat\n' ..
+  'end repeat\n' ..
+  'return out\n' ..
+  'end tell'
 
--- each register wears its own palette hue (base16 slots, so it follows every theme): point = accent
--- (navigating), edge = base09 (warm — pushing walls), cell = base0B (green — carrying a tile). You
--- read the mode by colour at a glance; the `· out` suffix marks a popped-out depth.
-local REGCOLOR = { point = theme.accent, edge = theme.base09 or theme.active, cell = theme.base0B or theme.active }
-function M.badge(reg, depth)
-  local col = REGCOLOR[reg] or theme.active
-  badge[1].strokeColor = { hex = col }
-  badge[2].text = "◆ " .. reg .. (depth > 0 and " · out" or "")
-  badge[2].textColor = { hex = col }
-end
-function M.showBadge() badge:show() end
-
--- the `?` reference card: a themed canvas built LIVE from the hint items (which town derives from
--- the keymap — keys.lua is the one doc). Rebuilt each open so it reflects the current map + palette.
-local card
-function M.hideCard()
-  if card then pcall(function() card:delete() end); card = nil end
-end
-function M.cardShown() return card ~= nil end
-function M.showCard(items)
-  M.hideCard()
-  items = items or {}
-  if #items == 0 then return end
-  local ncols = (#items > 7) and 2 or 1
-  local rows  = math.ceil(#items / ncols)
-  local PAD, TITLE, ROW, FOOT = 22, 40, 26, 30      -- paddings + title/row/footer bands
-  local KEYW, GAP, LBLW = 82, 12, 150               -- key column (right-aligned) | gap | label column
-  local colW = KEYW + GAP + LBLW
-  local W, H = PAD * 2 + colW * ncols, PAD + TITLE + rows * ROW + FOOT
-  local scr = hs.screen.primaryScreen():frame()
-  local c = hs.canvas.new({ x = scr.x + (scr.w - W) / 2, y = scr.y + (scr.h - H) / 2, w = W, h = H })
-  c:appendElements(
-    { type = "rectangle", action = "fill", roundedRectRadii = { xRadius = 14, yRadius = 14 },
-      fillColor = { hex = theme.bg, alpha = 0.97 }, strokeColor = { hex = theme.active }, strokeWidth = 1.5 },
-    { type = "text", text = "◆ town", textColor = { hex = theme.accent }, textSize = 15,
-      textFont = "Menlo-Bold", textAlignment = "left", frame = { x = PAD, y = PAD - 2, w = W - PAD * 2, h = 24 } })
-  for i, it in ipairs(items) do
-    local col, r = math.floor((i - 1) / rows), (i - 1) % rows   -- fill column-major
-    local x, y = PAD + col * colW, PAD + TITLE + r * ROW
-    c:appendElements(
-      { type = "text", text = it.keys, textColor = { hex = theme.accent }, textSize = 13,
-        textFont = "Menlo", textAlignment = "right", frame = { x = x, y = y, w = KEYW, h = ROW } },
-      { type = "text", text = it.label, textColor = { hex = theme.fg }, textSize = 13,
-        textFont = "Menlo", textAlignment = "left", frame = { x = x + KEYW + GAP, y = y, w = LBLW, h = ROW } })
-  end
-  c:appendElements(
-    { type = "text", text = "esc  ·  ? closes", textColor = { hex = theme.subtle }, textSize = 12,
-      textFont = "Menlo", textAlignment = "left", frame = { x = PAD, y = H - FOOT + 6, w = W - PAD * 2, h = 20 } })
-  c:level(hs.canvas.windowLevels.overlay)
-  c:show()
-  card = c
+function M.tabs(cb)
+  if not hs.application.get("Google Chrome") then cb({}); return end
+  sh("osascript -e '" .. LIST_AS .. "' 2>/dev/null", function(_, out)
+    local places = {}
+    for line in (out or ""):gmatch("[^\r\n]+") do
+      local wid, idx, title = line:match("^(%d+)\t(%d+)\t(.*)$")
+      if wid then
+        places[#places + 1] = { kind = "tab", app = "Google Chrome", title = title,
+          winId = tonumber(wid), tabIndex = tonumber(idx) }
+      end
+    end
+    cb(places)
+  end)
 end
 
-function M.reset()   -- hide all chrome (every mode exit lands here)
-  badge:hide()
-  M.hideCard()
+function M.activate(winId, tabIndex)
+  sh(("osascript -e 'tell application \"Google Chrome\"\n" ..
+      "activate\n" ..
+      "set index of (first window whose id is %d) to 1\n" ..
+      "set active tab index of (first window whose id is %d) to %d\n" ..
+      "end tell'"):format(winId, winId, tabIndex))
 end
 
-function M.stop()   -- teardown + GC anchor (its upvalue keeps the badge canvas reachable)
-  if badge then pcall(function() badge:delete() end) end
+function M.in_chrome()
+  local f = hs.application.frontmostApplication()
+  return f and f:name() == "Google Chrome"
+end
+
+-- Caps hjkl's depth-0 rung in Chrome: cycle the front window's active tab, wrapping.
+function M.cycleTab(step)
+  sh(("osascript -e 'tell application \"Google Chrome\"\n" ..
+      "set w to front window\n" ..
+      "set n to count of tabs of w\n" ..
+      "set i to active tab index of w\n" ..
+      "set i to ((i - 1 %+d + n) mod n) + 1\n" ..
+      "set active tab index of w to i\n" ..
+      "end tell'"):format(step))
 end
 
 return M

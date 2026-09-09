@@ -18,7 +18,7 @@ local m = {
 
   -- ⌃⏎ zoom is the one direct chord left (mac max, or tmux zooms the pane in the terminal).
   -- Directional motion is Caps hjkl — HS glides it: focus in a mac app, or ⌥hjkl emitted into
-  -- the terminal so nvim/tmux own the pane motion and cross back at their edge.
+  -- the terminal so nvim/tmux own the pane motion, wrapping at their edge (depth stays inside).
   ["ctrl return"] = aware("zoom"),
 }
 -- Caps then 1-9 → jump to a favourite. a plain digit inside the mode, so nothing
@@ -35,6 +35,7 @@ m["leader d"]  = surface("scroll")  -- d / u → half-page down / up (vim C-d/C-
 m["leader u"]  = surface("scroll")
 m["leader %"]  = surface("split")   -- % → split left/right
 m["leader \""] = surface("split")   -- " → split top/bottom
+m["leader m"]  = surface("menu bar")     -- opens it via AX; hjkl/return/esc drive it, all local
 -- Caps ⇧hjkl = the same motion one layer OUT (Shift = outward) — HS owns it; declared for the card.
 for _, key in ipairs({ "H", "J", "K", "L" }) do m["leader " .. key] = surface("outer") end
 -- Caps ⏎ zooms the inner thing (tmux pane in the terminal — HS routes that; else maximize ↔ restore

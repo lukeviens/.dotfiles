@@ -16,7 +16,7 @@ use crate::word::Word;
 /// just tokenizes it, so this is safe to grow — but only add structural tokens, never a data-ish one.
 const SAFE: &[&str] = &[
     // place kinds · pick targets · move dirs · arrange targets · key.at · theme names & modes
-    "window", "session", "app", "all", "apps", "windows", "sessions",
+    "window", "session", "app", "tab", "all", "apps", "windows", "sessions",
     "h", "j", "k", "l", "left", "right", "top", "bottom", "max", "fullscreen",
     "leader", "tmux", "next", "dark", "light", "sun", "black", "random",
     // palette-blob words (the `colors` value is a raw key=value string; base00–0F handled below)
