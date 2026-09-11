@@ -290,6 +290,33 @@ fn every_constructor_round_trips_into_a_word() {
     }
 }
 
+// ── menu: usage — choosing a place bumps a file-backed count, so a later show ranks by habit ──
+#[test]
+fn choosing_a_place_records_its_usage_as_a_write_effect() {
+    let (lua, menu) = resident("menu", json!({}), json!({}));
+    say(&lua, &menu, json!({"kind":"apps","tense":"past","body":{"places":[{"kind":"app","name":"WezTerm"}]}}));
+
+    let chose = say(&lua, &menu, json!({"kind":"chose","tense":"past","body":{"id":"1"}}));
+    assert_eq!(chose, Some(json!({"kind":"place","tense":"future","body":{"kind":"app","name":"WezTerm"}})));
+
+    let w = effects(&lua).into_iter().rev().find(|e| e["kind"] == "write")
+        .expect("choosing a place should bump its usage count");
+    assert!(w["path"].as_str().unwrap().ends_with("/usage"));
+    assert!(w["content"].as_str().unwrap().contains("app:WezTerm\t1"));
+}
+
+#[test]
+fn a_choices_uses_count_reflects_recorded_usage() {
+    let (lua, menu) = resident("menu", json!({}), json!({}));
+    feed_file(&lua, "/usage", "app:WezTerm\t7\napp:Weather\t0\n");
+
+    let show = say(&lua, &menu, json!({"kind":"apps","tense":"past","body":{"places":[
+        {"kind":"app","name":"Weather"}, {"kind":"app","name":"WezTerm"}]}})).unwrap();
+    let uses: Vec<i64> = show["body"]["choices"].as_array().unwrap()
+        .iter().map(|c| c["uses"].as_i64().unwrap()).collect();
+    assert_eq!(uses, vec![0, 7]); // Weather never chosen, WezTerm chosen 7 times — the picker's tiebreak reads this
+}
+
 // sessions the surface gathered reach the picker — menu no longer shells tmux itself.
 #[test]
 fn sessions_from_the_surface_reach_the_picker() {

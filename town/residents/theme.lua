@@ -4,12 +4,13 @@
 -- and WezTerm together. One file is the whole substrate.
 local COLORS = os.getenv("HOME") .. "/.config/theme/colors"
 
-local skins = {   -- cycle order (Caps t): dark → sun → light → black → dark; the first is the default.
+local skins = {   -- cycle order (Caps t): dark → sun → light → black → nova → dark; the first is the default.
   -- `mode` (light|dark) is the single source surfaces use to flip macOS appearance / nvim bg.
   { name = "dark",  mode = "dark",  bg = "#1f1d20", fg = "#f8f8f2", subtle = "#878787", active = "#f92672", accent = "#66d9ef" },
   { name = "sun",   mode = "light", bg = "#fdf6e3", fg = "#586e75", subtle = "#93a1a1", active = "#cb4b16", accent = "#268bd2" },
-  { name = "light", mode = "light", bg = "#faf8f3", fg = "#2d2a2e", subtle = "#9c9791", active = "#d6005c", accent = "#0e88b0" },
+  { name = "light", mode = "light", bg = "#faf8f3", fg = "#2d2a2e", subtle = "#9c9791", active = "#c14572", accent = "#0e88b0" },
   { name = "black", mode = "dark",  bg = "#000000", fg = "#ffffff", subtle = "#5a5a5a", active = "#00ff9f", accent = "#00e5ff" },
+  { name = "nova",  mode = "dark",  bg = "#17121c", fg = "#f0edf2", subtle = "#776388", active = "#a143f4", accent = "#e571c4" },
 }
 
 -- a coherent RANDOM dark palette (Caps ⇧T): one base hue drives bg/fg/subtle/active, a

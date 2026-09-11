@@ -2,7 +2,11 @@
 -- a `favourite` pins the choice. town decides what to show and what a pick means; the surface
 -- renders labels, reports ids, and gathers the live lists (apps/windows/sessions) on request.
 -- Recent places come from town's own past. Every choice is a place, so choosing one is just
--- `place`(future) — which the owning surface obeys.
+-- `place`(future) — which the owning surface obeys. Every choice also carries `uses` — times
+-- you've picked exactly that place — so a fuzzy tie in the picker breaks by habit, not alphabet
+-- ("we" → WezTerm, not Weather); kept in a file, not a present fact, since `chose` is a
+-- past-tense event nothing else ever reads back through town.
+local USAGE = os.getenv("HOME") .. "/.cache/town/usage"
 local shown = {}
 
 local function label(p)
@@ -10,21 +14,6 @@ local function label(p)
   if p.kind == "tab" then return p.title .. "  ·  tab" end
   if p.kind == "window" and p.title and p.title ~= "" then return p.app .. " — " .. p.title end
   return p.app or p.name or "?"
-end
-
-local function menu(places)          -- remember them; show labels + an icon hint (app/kind)
-  shown = places
-  local choices = {}
-  for i, p in ipairs(places) do
-    choices[i] = { id = tostring(i), label = label(p), app = p.app or p.name, kind = p.kind }
-  end
-  return intent("show", { choices = choices })
-end
-
-local function recent(places)        -- most-recent-first (everywhere() dedups by pkey)
-  local out = {}
-  for i = #places, 1, -1 do out[#out + 1] = places[i] end
-  return out
 end
 
 local function pkey(p)               -- identity: titled windows differ by title; a
@@ -35,6 +24,41 @@ local function pkey(p)               -- identity: titled windows differ by title
   end
   if p.kind == "tab" then return "tab:" .. tostring(p.winId) .. ":" .. tostring(p.tabIndex) end
   return (p.kind or "") .. ":" .. (p.app or p.name or "")
+end
+
+local function loadUsage()          -- pkey -> times chosen, from the tab-separated usage file
+  local t = {}
+  for line in (slurp(USAGE) or ""):gmatch("[^\r\n]+") do
+    local k, n = line:match("^(.-)\t(%d+)$")
+    if k then t[k] = tonumber(n) end
+  end
+  return t
+end
+
+local function bump(p)              -- one more pick of p — read, increment, rewrite whole file
+  local t = loadUsage()
+  local k = pkey(p):gsub("\t", " ")
+  t[k] = (t[k] or 0) + 1
+  local lines = {}
+  for key, n in pairs(t) do lines[#lines + 1] = key .. "\t" .. n .. "\n" end
+  emit(USAGE, table.concat(lines))
+end
+
+local function menu(places)          -- remember them; show labels + an icon hint (app/kind)
+  shown = places
+  local usage = loadUsage()
+  local choices = {}
+  for i, p in ipairs(places) do
+    choices[i] = { id = tostring(i), label = label(p), app = p.app or p.name, kind = p.kind,
+      uses = usage[pkey(p)] or 0 }
+  end
+  return intent("show", { choices = choices })
+end
+
+local function recent(places)        -- most-recent-first (everywhere() dedups by pkey)
+  local out = {}
+  for i = #places, 1, -1 do out[#out + 1] = places[i] end
+  return out
 end
 
 -- the universal list: town's recent places first (where you go), then the surface's live
@@ -59,7 +83,7 @@ return react {
   on("everything", function(w) return menu(everywhere(w.body.places)) end),  -- live list + town's places & sessions
   on("chose", function(w)
     local p = shown[tonumber(w.body.id)]
-    if p then return intent("place", p) end
+    if p then bump(p); return intent("place", p) end
   end),
   on("favourite", function(w)
     local p = shown[tonumber(w.body.id)]

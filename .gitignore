@@ -9,6 +9,7 @@ infracost
 tfenv
 1Password
 configstore
+cagent
 
 # town-generated from the palette on every theme switch — not source, don't track
 theme/colors

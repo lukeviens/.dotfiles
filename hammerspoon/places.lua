@@ -83,7 +83,7 @@ function M.decorate(raw)
   local choices = {}
   for _, c in ipairs(raw or {}) do
     local ic, key = icon(c)
-    choices[#choices + 1] = { text = c.label, id = c.id, icon = ic, iconKey = key }
+    choices[#choices + 1] = { text = c.label, id = c.id, icon = ic, iconKey = key, uses = c.uses }
   end
   return choices
 end
