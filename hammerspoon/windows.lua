@@ -71,9 +71,18 @@ end
 function M.wez_zoom() send_bytes("\\033[13;5u") end   -- ⏎ → resize-pane -Z (the ⌃⏎ User0 key)
 
 -- scroll the focused mac window a page (the `scroll` verb's mac path — a mac app, not the terminal).
+-- A scroll event has no notion of "focus" — the OS routes it by the event's own location, which
+-- defaults to wherever the cursor physically is. Target the focused window's own frame instead,
+-- so scrolling follows keyboard focus like everything else in Caps-mode, not the mouse.
 function M.scroll(dir)
   local n = (dir == "d") and -12 or 12   -- lines ≈ a half-page; down = content up
-  hs.eventtap.event.newScrollEvent({ 0, n }, {}, "line"):post()
+  local ev = hs.eventtap.event.newScrollEvent({ 0, n }, {}, "line")
+  local w = hs.window.focusedWindow()
+  if w then
+    local f = w:frame()
+    ev:location({ x = f.x + f.w / 2, y = f.y + f.h / 2 })
+  end
+  ev:post()
 end
 
 -- maximize ↔ restore the focused mac window.

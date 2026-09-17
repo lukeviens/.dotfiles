@@ -36,12 +36,13 @@ m["leader u"]  = surface("scroll")
 m["leader %"]  = surface("split")   -- % → split left/right
 m["leader \""] = surface("split")   -- " → split top/bottom
 m["leader m"]  = surface("menu bar")     -- opens it via AX; hjkl/return/esc drive it, all local
+m["leader F"]  = surface("click")        -- fuzzy-search & click any labeled on-screen element
 -- Caps ⇧hjkl = the same motion one layer OUT (Shift = outward) — HS owns it; declared for the card.
 for _, key in ipairs({ "H", "J", "K", "L" }) do m["leader " .. key] = surface("outer") end
--- Caps ⏎ zooms the inner thing (tmux pane in the terminal — HS routes that; else maximize ↔ restore
--- the mac window). Caps ⇧⏎ the outer thing: the whole window big — fills the screen, NOT mac-native
--- fullscreen (the one we never use).
+-- Caps ⏎ zooms the inner thing (tmux pane in the terminal — HS routes that; else maximize ↔
+-- restore the mac window). Caps ⇧⏎ always goes straight to that same mac maximize, even from
+-- inside a terminal pane — same action either way, so one shared label.
 m["leader return"]   = arrange("max", "zoom")
-m["leader S-return"] = arrange("max", "full")
+m["leader S-return"] = arrange("max", "zoom")
 
 return keymap(m)

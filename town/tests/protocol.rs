@@ -67,8 +67,8 @@ fn the_keymap_describes_itself() {
     assert!(items.iter().any(|i| i["label"] == "split"));   // % / "
     assert!(items.iter().any(|i| i["label"] == "scroll"));  // d / u half-page
     assert!(items.iter().any(|i| i["label"] == "outer"));   // ⇧hjkl one layer out (Shift = outward)
-    assert!(items.iter().any(|i| i["label"] == "zoom"));    // Caps ⏎ inner
-    assert!(items.iter().any(|i| i["label"] == "full"));   // Caps ⇧⏎ outer
+    // Caps ⏎ and Caps ⇧⏎ both land on the same mac maximize outside a terminal pane — one label
+    assert!(items.iter().any(|i| i["label"] == "zoom" && i["keys"] == "S-return return"));
 }
 
 // ── keys: town owns the whole keymap; the surface binds the chords it's handed ─────

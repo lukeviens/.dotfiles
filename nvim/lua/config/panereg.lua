@@ -1,6 +1,6 @@
--- panereg.lua — this nvim is a town resident. It speaks a `focus` word (its RPC
--- socket + cwd + pane) whenever it comes to the foreground, so town's `present`
--- always knows the nvim you're looking at. Also speaks `vim active=0|1` on
+-- panereg.lua — this nvim reports to town as a client, over the `town` CLI. It speaks a
+-- `focus` word (its RPC socket + cwd + pane) whenever it comes to the foreground, so town's
+-- `present` always knows the nvim you're looking at. Also speaks `vim active=0|1` on
 -- enter/leave. jobstart (async) throughout, except VimLeave's report, which
 -- blocks (vim.fn.system) so it lands before the process exits.
 local pane = os.getenv("TMUX_PANE")
@@ -13,7 +13,7 @@ if pane then
   local function speak_vim(active)
     vim.fn.jobstart({ TOWN, "talk", "vim", "active=" .. active, "pane=" .. pane })
   end
-  local grp = vim.api.nvim_create_augroup("TownResident", { clear = true })
+  local grp = vim.api.nvim_create_augroup("TownReport", { clear = true })
   vim.api.nvim_create_autocmd({ "VimEnter", "FocusGained", "DirChanged" }, { group = grp, callback = speak_focus })
   vim.api.nvim_create_autocmd("VimEnter", { group = grp, callback = function() speak_vim("1") end })
   vim.api.nvim_create_autocmd("VimLeave", { group = grp,

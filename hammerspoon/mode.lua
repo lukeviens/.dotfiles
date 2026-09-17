@@ -22,6 +22,7 @@ local hud = require("hud")
 local chrome = require("chrome")   -- Chrome's own depth-0 rung: cycling its tabs (see ladder.plan)
 local ladder = require("ladder")   -- the one decision: register+depth+surface → what hjkl does
 local menunav = require("menunav")   -- drives an open mac menu (leader m) purely via AX, no keys
+local reach = require("reach")       -- search-and-click any labeled on-screen element (leader ⇧F)
 
 function M.leave()
   if modeOn then leader:exit() end
@@ -78,9 +79,16 @@ function M.start(town, windows, warm)
     inMenu = menunav.open()
     if inMenu then hud.badge("menu") else hud.badge(register, locate(depth)) end
   end)
+  -- ⇧F: fuzzy-search & click any labeled on-screen element. Deferred a tick — leaving the modal
+  -- from inside its own key dispatch is asking for trouble (same reason plain `f` only leaves
+  -- async, via town's round trip).
+  leader:bind({ "shift" }, "f", function()
+    usedHold = true
+    hs.timer.doAfter(0, function() M.leave(); reach.open() end)
+  end)
   -- Caps ⏎ zooms the INNER thing: the tmux pane in the terminal (HS routes it), else maximize ↔
-  -- restore the mac window (through town). Caps ⇧⏎ is the OUTER thing — the whole window big —
-  -- always the mac window, so it just talks the key (see keys.lua).
+  -- restore the mac window (through town). Caps ⇧⏎ skips the pane check and always goes straight
+  -- to that same mac maximize (see keys.lua) — same action, just without the inner detour.
   leader:bind({}, "return", function()
     usedHold = true
     if inMenu then menunav.select(); inMenu = false; hud.badge(register, locate(depth))
@@ -178,13 +186,13 @@ function M.start(town, windows, warm)
     if e:getKeyCode() ~= hs.keycodes.map.f18 then
       -- exclusive mode: while it's open, swallow every keyDown that ISN'T a town-mode key
       -- (modifier chords, and any unbound key) so nothing else on the machine responds.
-      -- town keys — plain a-z/0-9/// return/escape, or a shift combo (hjkl/return///t and 5/'
+      -- town keys — plain a-z/0-9/// return/escape, or a shift combo (hjkl/return///t/f and 5/'
       -- for % ") — fall through to the modal below.
       if modeOn and e:getType() == hs.eventtap.event.types.keyDown then
         local f, c = e:getFlags(), hs.keycodes.map[e:getKeyCode()]
         local modekey   -- is this a town-mode key (falls through to the modal), or noise to swallow?
         if f.cmd or f.ctrl or f.alt or f.fn then modekey = false
-        elseif f.shift then modekey = (c == "h" or c == "j" or c == "k" or c == "l" or c == "return" or c == "/" or c == "t" or c == "5" or c == "'" or c == "c" or c == "e")   -- …5/' → % "; c/e = roll-arm a register with Shift held
+        elseif f.shift then modekey = (c == "h" or c == "j" or c == "k" or c == "l" or c == "return" or c == "/" or c == "t" or c == "f" or c == "5" or c == "'" or c == "c" or c == "e")   -- …5/' → % "; c/e = roll-arm a register with Shift held; f = reach
         else modekey = c ~= nil and (c:match("^%l$") or c:match("^%d$") or c == "/" or c == "return" or c == "escape") end
         if not modekey then return true end
       end

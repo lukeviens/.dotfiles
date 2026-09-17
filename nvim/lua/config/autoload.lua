@@ -2,9 +2,9 @@
 -- GENERAL
 --
 
--- things going into the hole animation :o 
--- TODO: enable more logic and configuration 
---  - different entity types, e.g. hole consumes, tree stops, etc. 
+-- things going into the hole animation :o
+-- TODO: enable more logic and configuration
+--  - different entity types, e.g. hole consumes, tree stops, etc.
 --  - then, better randomization of scene and events
 
 local function animate_buffer()
@@ -42,7 +42,7 @@ if animate_buffer() then
   end
 
   local function run_scene()
-    -- decide action 
+    -- decide action
     if thing_pos == #scene or thing_pos == 2 then
       if not is_action(10) then return end
     else
@@ -57,7 +57,7 @@ if animate_buffer() then
       thing_dir = 1
     end
 
-    -- update the position 
+    -- update the position
     thing_pos = thing_pos + thing_dir
 
     -- in the hole
@@ -73,7 +73,7 @@ if animate_buffer() then
       scene[thing_pos] = thing
     end
 
-    -- render the scene  
+    -- render the scene
     render_scene()
   end
 
@@ -223,14 +223,13 @@ vim.schedule(apply_transparent)
 do
 	local palette = require('config.theme')   -- one parser + the one path (config/theme.lua)
 	local SCHEME = { dark = "molokai", sun = "tokyonight-day", light = "tokyonight-day", black = "molokai" }
-	local uv = vim.uv or vim.loop
 
 	local function read_skin()   -- the whole palette (fresh), over name/mode defaults
 		return vim.tbl_extend("force", { name = "dark", mode = "dark" }, palette.read())
 	end
 
-	-- the resident writes the derived 16-colour scheme (base00-0F) into the file; read it —
-	-- one generator (in the theme resident), shared by WezTerm ANSI and nvim.
+	-- town writes the derived 16-colour scheme (base00-0F) into the file; read it —
+	-- one generator, shared by WezTerm ANSI and nvim.
 	local function file_base16(s)
 		local pal = {}
 		for i = 0, 15 do local k = string.format("base%02X", i); pal[k] = s[k] end
@@ -255,14 +254,24 @@ do
 		end
 	end
 	vim.api.nvim_create_autocmd("VimEnter", { callback = apply })  -- match the theme once loaded
-	local function watch()
-		local h = uv.new_fs_event(); if not h then return end
-		h:start(palette.path, {}, vim.schedule_wrap(function()
-			apply()
-			h:stop(); watch()   -- re-arm (survives the resident's rewrite)
-		end))
+
+	-- town already watches the palette file centrally — join that instead of every nvim
+	-- instance re-watching the raw file itself. No libuv handle, no redundant reads across N panes.
+	local TOWN = vim.fn.expand("~/.config/town/target/release/town")
+	local function listen()
+		vim.fn.jobstart({ TOWN, "listen" }, {
+			on_stdout = function(_, lines)
+				for _, line in ipairs(lines or {}) do
+					if line ~= "" then
+						local ok, w = pcall(vim.json.decode, line)
+						if ok and w.kind == "theme" then apply() end
+					end
+				end
+			end,
+			on_exit = function() vim.defer_fn(listen, 1000) end,   -- town restarted — reconnect
+		})
 	end
-	watch()
+	listen()
 end
 
 

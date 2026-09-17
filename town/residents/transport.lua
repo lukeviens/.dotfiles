@@ -28,11 +28,10 @@ local function nav(d)
   return defer("vim", "M-" .. d, wrap)
 end
 
--- scroll: defer to whoever owns the pane, recursively — vim (native C-d/C-u half-page), else Claude
--- Code (its own PageUp/PageDown, also half a viewport), else the pane's scrollback via copy-mode.
--- THIS is the recursive defer: one occupant per layer, each fallback is the next defer.
-local function scroll(vk, cc, way)
-  return defer("vim", vk, defer("claude", cc, ("copy-mode -e ; send-keys -X halfpage-%s"):format(way)))
+-- scroll: defer to vim (native C-d/C-u half-page); anything else gets copy-mode's scrollback —
+-- no per-program special cases, since a program can't be assumed to handle PageUp/PageDown.
+local function scroll(vk, way)
+  return defer("vim", vk, ("copy-mode -e ; send-keys -X halfpage-%s"):format(way))
 end
 
 -- the transport: { verb, dir, key HS injects, tmux command }. one table, two surfaces derive it.
@@ -46,8 +45,8 @@ for _, d in ipairs(ORDER) do
   row("edge-pane", d, "M-" .. x.compass, "resize-pane -" .. x.sel .. " 5")    -- push the wall, tmux only — no defer
   row("cell",  d, "M-C-" .. d,       "swap-pane -t '{" .. x.of .. "}'")       -- carry the tile
 end
-row("scroll", "d", "M-d",  scroll("C-d", "NPage", "down"))   -- vim C-d / CC PageDown / copy-mode
-row("scroll", "u", "M-u",  scroll("C-u", "PPage", "up"))     -- vim C-u / CC PageUp / copy-mode
+row("scroll", "d", "M-d",  scroll("C-d", "down"))   -- vim C-d, else copy-mode
+row("scroll", "u", "M-u",  scroll("C-u", "up"))     -- vim C-u, else copy-mode
 row("tab", "prev", "M-[", "previous-window")   -- tmux windows (tabs) — unconditional, no defer
 row("tab", "next", "M-]", "next-window")       -- one town rung out from pane/split point-nav
 row("flip",   "o", "M-o", defer("vim", "C-o", 'run-shell "$TOWN talk future back"'))     -- back: nvim jumplist, else the trail
