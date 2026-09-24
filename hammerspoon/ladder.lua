@@ -7,9 +7,21 @@ local M = {}
 local TABDIR = { h = "prev", k = "prev", j = "next", l = "next" }   -- point's middle rung: tmux windows
 local STEP = { prev = -1, next = 1 }                                -- same reading, for Chrome's tab cycle
 
--- ctx = { inTerm, inVim, inChrome }. `d` may be nil when only `where` is wanted (a badge repaint
--- with no motion pending) — nothing below needs it except the direction/step for an actual `act`.
-function M.plan(register, d, atDepth, DMAX, ctx)
+-- ctx = { inTerm, inVim, inChrome }. `verb` is the grabbed register for hjkl, or "flip"
+-- for o/i. `d` may be nil when only `where` is wanted (a badge repaint).
+function M.plan(verb, d, atDepth, DMAX, ctx)
+  if verb == "flip" then
+    if ctx.inTerm and atDepth == 0 then
+      return { act = "wez", verb = "flip", dir = d }
+    elseif ctx.inTerm and atDepth < DMAX then
+      return { act = "onkey", at = "tmux", dir = d }
+    elseif ctx.inChrome and atDepth == 0 then
+      return { act = "chrome-cycle", step = (d == "o") and -1 or 1 }
+    else
+      return { act = "onkey", at = "leader", dir = d }
+    end
+  end
+  local register = verb
   if atDepth == 0 and ctx.inTerm then
     local where = (register == "cell") and "tmux" or (ctx.inVim and "nvim" or "tmux")
     return { act = "wez", verb = register, dir = d, where = where }

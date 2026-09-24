@@ -11,9 +11,9 @@ local m = {
   ["leader /"] = grep(),
   ["leader t"] = retheme("next"),     -- Caps t → cycle the palette
   ["leader T"] = retheme("random", "random theme"),  -- Caps ⇧T → a fresh random palette
-  ["leader o"] = back(),              -- o / i flip back / forward through ALL recent places
-  ["leader i"] = forward(),           -- (windows AND sessions — same universe as leader f)
-  ["tmux o"]   = back("session"),     -- ⌃b o/i stays session-only inside the terminal
+  ["leader o"] = back("window"),     -- outer depth: recent mac windows
+  ["leader i"] = forward("window"),
+  ["tmux o"]   = back("session"),    -- terminal middle depth: recent sessions
   ["tmux i"]   = forward("session"),
 
   -- ⌃⏎ zoom is the one direct chord left (mac max, or tmux zooms the pane in the terminal).

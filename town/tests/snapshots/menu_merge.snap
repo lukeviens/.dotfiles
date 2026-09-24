@@ -4,34 +4,34 @@
     "id": "1",
     "kind": "window",
     "label": "Slack",
-    "uses": 0
+    "score": 0
   },
   {
     "app": "work",
     "id": "2",
     "kind": "session",
     "label": "work  ·  session",
-    "uses": 0
+    "score": 0
   },
   {
     "app": "Chrome",
     "id": "3",
     "kind": "window",
     "label": "Chrome",
-    "uses": 0
+    "score": 0
   },
   {
     "app": "Linear",
     "id": "4",
     "kind": "app",
     "label": "Linear",
-    "uses": 0
+    "score": 0
   },
   {
     "app": "mind",
     "id": "5",
     "kind": "session",
     "label": "mind  ·  session",
-    "uses": 0
+    "score": 0
   }
 ]

@@ -30,11 +30,11 @@ fn a_key_becomes_an_intention() {
     assert_eq!(one["kind"], "place");
     assert_eq!(one["body"]["slot"], 1);
 
-    // i / o flip forward / back through ALL recent places (no kind filter)
+    // outer depth walks mac windows, even when sessions are interleaved in the place trail
     let fwd = say(&lua, &keys, json!({"kind":"key","body":{"at":"leader","press":"i"}})).unwrap();
     assert_eq!(fwd["kind"], "place");
     assert_eq!(fwd["body"]["step"], -1);
-    assert!(fwd["body"]["kind"].is_null());   // spans windows + sessions, like leader f
+    assert_eq!(fwd["body"]["kind"], "window");
 
     // ⌃b i inside the terminal still flips sessions only
     let tmux_i = say(&lua, &keys, json!({"kind":"key","body":{"at":"tmux","press":"i"}})).unwrap();
@@ -78,8 +78,9 @@ fn the_keymap_describes_itself() {
     assert!(items.iter().any(|i| i["label"] == "split"));   // % / "
     assert!(items.iter().any(|i| i["label"] == "scroll"));  // d / u half-page
     assert!(items.iter().any(|i| i["label"] == "outer"));   // ⇧hjkl one layer out (Shift = outward)
-    // Caps ⏎ and Caps ⇧⏎ both land on the same mac maximize outside a terminal pane — one label
-    assert!(items.iter().any(|i| i["label"] == "zoom" && i["keys"] == "S-return return"));
+    // Caps ⏎ zooms the inner pane; Caps ⇧⏎ goes straight to mac maximize.
+    assert!(items.iter().any(|i| i["label"] == "zoom" && i["keys"] == "return"));
+    assert!(items.iter().any(|i| i["label"] == "maximize" && i["keys"] == "S-return"));
 }
 
 // ── keys: town owns the whole keymap; the surface binds the chords it's handed ─────
@@ -115,6 +116,42 @@ fn the_trail_flips_through_recent_places() {
     assert_eq!(back(&lua, &place), "Bravo"); // back from Charlie
     assert_eq!(back(&lua, &place), "Alpha");
     assert_eq!(fwd(&lua, &place), "Bravo"); // forward again — nothing lost
+}
+
+#[test]
+fn windows_of_one_app_have_separate_places() {
+    let (lua, place) = resident("place", json!({}), json!({}));
+    let win = |win_id: i64, title: &str| json!({"kind":"place","tense":"present","body":{
+        "kind":"window","app":"Chrome","winId":win_id,"title":title
+    }});
+    let back = json!({"kind":"place","tense":"future","body":{"step":1,"kind":"window"}});
+
+    say(&lua, &place, win(10, "First"));
+    say(&lua, &place, win(20, "Second"));
+    assert_eq!(say(&lua, &place, back.clone()).unwrap()["body"]["winId"], 10);
+    say(&lua, &place, win(10, "Renamed")); // focus echo with a changed title keeps its id
+    assert_eq!(say(&lua, &place, back), None);
+}
+
+#[test]
+fn window_and_session_flips_keep_independent_positions() {
+    let (lua, place) = resident("place", json!({}), json!({}));
+    let focus = |kind: &str, name: &str| {
+        if kind == "window" {
+            json!({"kind":"place","tense":"present","body":{"kind":kind,"app":name}})
+        } else {
+            json!({"kind":"place","tense":"present","body":{"kind":kind,"name":name}})
+        }
+    };
+    let step = |kind: &str, n: i32| json!({"kind":"place","tense":"future","body":{"kind":kind,"step":n}});
+    say(&lua, &place, focus("window", "A"));
+    say(&lua, &place, focus("session", "one"));
+    say(&lua, &place, focus("window", "B"));
+    say(&lua, &place, focus("session", "two"));
+    assert_eq!(say(&lua, &place, step("window", 1)).unwrap()["body"]["app"], "A");
+    assert_eq!(say(&lua, &place, step("session", 1)).unwrap()["body"]["name"], "one");
+    assert_eq!(say(&lua, &place, step("window", -1)).unwrap()["body"]["app"], "B");
+    assert_eq!(say(&lua, &place, step("session", -1)).unwrap()["body"]["name"], "two");
 }
 
 // ── place: a flip drops its OWN echo. Flipping focuses a real window/session and the surface
@@ -303,7 +340,8 @@ fn every_constructor_round_trips_into_a_word() {
     }
 }
 
-// ── menu: usage — choosing a place bumps a file-backed count, so a later show ranks by habit ──
+// ── menu: usage — choosing a place bumps a file-backed count + timestamp, so a later show
+// ranks by frecency (habit weighted by recency), not raw habit alone ──
 #[test]
 fn choosing_a_place_records_its_usage_as_a_write_effect() {
     let (lua, menu) = resident("menu", json!({}), json!({}));
@@ -316,20 +354,25 @@ fn choosing_a_place_records_its_usage_as_a_write_effect() {
     let w = effects(&lua).into_iter().rev().find(|e| e["kind"] == "write")
         .expect("choosing a place should bump its usage count");
     assert!(w["path"].as_str().unwrap().ends_with("/usage"));
-    assert!(w["content"].as_str().unwrap().contains("app:WezTerm\t1"));
+    // "count\tlast" — a fresh pick's timestamp is some positive unix time, not asserted exactly
+    assert!(w["content"].as_str().unwrap().contains("app:WezTerm\t1\t"));
 }
 
 #[test]
-fn a_choices_uses_count_reflects_recorded_usage() {
+fn a_choices_score_reflects_recorded_usage_weighted_by_recency() {
     let (lua, menu) = resident("menu", json!({}), json!({}));
-    feed_file(&lua, "/usage", "app:WezTerm\t7\napp:Weather\t0\n");
-    say(&lua, &menu, json!({"kind":"menu","tense":"future","body":{"what":"apps"}}));
+    // the sandbox clock is frozen at 0 — a negative `last` simulates elapsed time
+    feed_file(&lua, "/usage", "app:WezTerm\t7\t-1000000\napp:Weather\t0\t0\napp:Finder\t2\t-100\n");
 
+    say(&lua, &menu, json!({"kind":"menu","tense":"future","body":{"what":"apps"}}));
     let show = say(&lua, &menu, json!({"kind":"places","tense":"present","body":{"places":[
-        {"kind":"app","name":"Weather"}, {"kind":"app","name":"WezTerm"}]}})).unwrap();
-    let uses: Vec<i64> = show["body"]["choices"].as_array().unwrap()
-        .iter().map(|c| c["uses"].as_i64().unwrap()).collect();
-    assert_eq!(uses, vec![0, 7]); // Weather never chosen, WezTerm chosen 7 times — the picker's tiebreak reads this
+        {"kind":"app","name":"Weather"}, {"kind":"app","name":"WezTerm"}, {"kind":"app","name":"Finder"}]}})).unwrap();
+    let score: Vec<f64> = show["body"]["choices"].as_array().unwrap()
+        .iter().map(|c| c["score"].as_f64().unwrap()).collect();
+    // Weather: never picked → 0. WezTerm: 7 picks, but ~11.6 days old → ×0.5 = 3.5. Finder: only
+    // 2 picks, but 100s ago (within the hour) → ×4 = 8 — fewer-but-recent outranks more-but-stale,
+    // which is the whole point of frecency over a flat count.
+    assert_eq!(score, vec![0.0, 3.5, 8.0]);
 }
 
 // sessions the surface gathered reach the picker — menu no longer shells tmux itself.

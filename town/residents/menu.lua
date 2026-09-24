@@ -1,9 +1,9 @@
 -- menu — one noun, three tenses. Future by `what`: wished for; answered at once from the `places`
 -- index with a future by `choices`, which the surface shows — and again when the surface refreshes
 -- the index under it. Present: it's up. Past { id?, slot? }: how it ended — go there, pin it, or
--- nothing. Recent places come from town's own past. Every choice also carries `uses` — times
--- you've picked exactly that place — so a fuzzy tie in the picker breaks by habit, not alphabet
--- ("we" → WezTerm, not Weather); kept in a file, not a present fact — nothing else reads it.
+-- nothing. Recent places come from town's own past. Each choice carries a frecency `score`
+-- (how often and how recently it was chosen) so fuzzy ties break by habit. Usage stays in a
+-- file rather than a present fact; no other resident reads it.
 local USAGE = os.getenv("HOME") .. "/.cache/town/usage"
 local shown = {}
 local wanted            -- the `what` of the menu currently wished for, or nil
@@ -25,31 +25,43 @@ local function pkey(p)               -- identity: titled windows differ by title
   return (p.kind or "") .. ":" .. (p.app or p.name or "")
 end
 
-local function loadUsage()          -- pkey -> times chosen, from the tab-separated usage file
-  local t = {}
+local function loadUsage()          -- pkey -> {count, last} from the usage file (`last` is
+  local t = {}                      -- optional — a file from before frecency existed still loads)
   for line in (slurp(USAGE) or ""):gmatch("[^\r\n]+") do
-    local k, n = line:match("^(.-)\t(%d+)$")
-    if k then t[k] = tonumber(n) end
+    local k, n, last = line:match("^(.-)\t(%d+)\t?(%-?%d*)$")
+    if k then t[k] = { count = tonumber(n), last = tonumber(last) or 0 } end
   end
   return t
 end
 
-local function bump(p)              -- one more pick of p — read, increment, rewrite whole file
+local function bump(p)              -- one more pick of p, now — read, increment, rewrite whole file
   local t = loadUsage()
   local k = pkey(p):gsub("\t", " ")
-  t[k] = (t[k] or 0) + 1
+  local u = t[k] or { count = 0, last = 0 }
+  u.count, u.last = u.count + 1, os.time()
+  t[k] = u
   local lines = {}
-  for key, n in pairs(t) do lines[#lines + 1] = key .. "\t" .. n .. "\n" end
+  for key, u2 in pairs(t) do lines[#lines + 1] = key .. "\t" .. u2.count .. "\t" .. u2.last .. "\n" end
   emit(USAGE, table.concat(lines))
 end
 
-local function menu(places)          -- remember them; the menu by its choices: labels + an icon hint
+-- frecency: count weighted by how recently it was last picked — a pick from the last hour
+-- outweighs the same count from last month. Fixed tiers, not a smooth decay curve — same shape
+-- frecency algorithms (fish's z, Firefox's autocomplete) use.
+local function frecency(u)
+  if not u or u.count == 0 then return 0 end
+  local age = os.time() - u.last
+  local mult = (age < 3600 and 4) or (age < 86400 and 2) or (age < 604800 and 1) or 0.5
+  return u.count * mult
+end
+
+local function menu(places)          -- remember them; the menu by its choices: labels + icon hint
   shown = places
   local usage = loadUsage()
   local choices = {}
   for i, p in ipairs(places) do
     choices[i] = { id = tostring(i), label = label(p), app = p.app or p.name, kind = p.kind,
-      uses = usage[pkey(p)] or 0 }
+      score = frecency(usage[pkey(p)]) }
   end
   return intent("menu", { choices = choices })
 end

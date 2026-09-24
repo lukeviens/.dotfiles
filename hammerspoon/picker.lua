@@ -102,10 +102,10 @@ function render(){                          // DOM + textContent — never inner
   });
   const s=l.children[sel]; if(s) s.scrollIntoView({block:'nearest'});
 }
-function filter(query){                     // tie-break: fuzzy score, then habit (uses), then a-z
+function filter(query){                     // tie-break: fuzzy score, then frecency, then a-z
   items = CH.map(c=>({c,sc:score(query,c.text)}))
             .filter(x=>x.sc>=0)
-            .sort((a,b)=> b.sc-a.sc || b.c.uses-a.c.uses || a.c.text.localeCompare(b.c.text))
+            .sort((a,b)=> b.sc-a.sc || b.c.score-a.c.score || a.c.text.localeCompare(b.c.text))
             .map(x=>x.c);
   sel=0; render(); count.textContent = items.length+'/'+CH.length;
 }
@@ -249,7 +249,7 @@ end
 local function push(opts, keep)
   local rows, newmap, anyNew = {}, {}, false
   for i, c in ipairs(opts.choices or {}) do
-    rows[i] = { text = c.text, _i = i, ik = c.iconKey, uses = c.uses or 0 }
+    rows[i] = { text = c.text, _i = i, ik = c.iconKey, score = c.score or 0 }
     local url = encodeIcon(c)
     if url then newmap[c.iconKey] = url; anyNew = true end
   end

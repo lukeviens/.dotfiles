@@ -52,8 +52,8 @@ row("scroll", "d", "M-d",  scroll("C-d", "NPage", "down"))   -- vim C-d / alt-sc
 row("scroll", "u", "M-u",  scroll("C-u", "PPage", "up"))     -- vim C-u / alt-screen PageUp / copy-mode
 row("tab", "prev", "M-[", "previous-window")   -- tmux windows (tabs) — unconditional, no defer
 row("tab", "next", "M-]", "next-window")       -- one town rung out from pane/split point-nav
-row("flip",   "o", "M-o", defer("vim", "C-o", 'run-shell -b "$TOWN talk future place step=1 kind=session"'))     -- back: nvim jumplist, else the trail
-row("flip",   "i", "M-i", defer("vim", "C-i", 'run-shell -b "$TOWN talk future place step=-1 kind=session"'))  -- forward: the same
+row("flip",   "o", "M-o", defer("vim", "M-o", 'run-shell -b "$TOWN talk future place step=1 kind=session"'))     -- previous buffer in nvim, else previous session
+row("flip",   "i", "M-i", defer("vim", "M-i", 'run-shell -b "$TOWN talk future place step=-1 kind=session"'))  -- next buffer in nvim, else next session
 row("split",  "lr", "M-%",  "split-window -h")       -- split left/right
 row("split",  "tb", "M-\"", "split-window -v")       -- split top/bottom
 row("zoom",   "z", "M-z",   "resize-pane -Z")         -- the pane, inner rung (Caps ⏎ / ⌃⏎)

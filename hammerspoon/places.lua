@@ -55,7 +55,7 @@ function M.list_windows(fresh)
     local title = w:title()
     if w:isStandard() and title ~= "" then
       local app = w:application()
-      out[#out + 1] = { app = app and app:name() or "?", title = title }
+      out[#out + 1] = { app = app and app:name() or "?", title = title, winId = w:id() }
     end
   end
   win_cache = out
@@ -86,7 +86,7 @@ function M.decorate(raw)
   local choices = {}
   for _, c in ipairs(raw or {}) do
     local ic, key = icon(c)
-    choices[#choices + 1] = { text = c.label, id = c.id, icon = ic, iconKey = key, uses = c.uses }
+    choices[#choices + 1] = { text = c.label, id = c.id, icon = ic, iconKey = key, score = c.score }
   end
   return choices
 end
@@ -99,37 +99,45 @@ local function app_places()
 end
 local function window_places()
   local out = {}
-  for _, win in ipairs(M.list_windows()) do out[#out + 1] = { kind = "window", app = win.app, title = win.title } end
+  for _, win in ipairs(M.list_windows()) do
+    out[#out + 1] = { kind = "window", app = win.app, title = win.title, winId = win.winId }
+  end
   return out
 end
 
--- HS produces the focused thing as a present place — where you are now. For the terminal that's
--- the CURRENT tmux session (queried live), not the WezTerm window: it keeps the flip trail's idea
--- of "where you are" correct when you click into the terminal, and dedupes cleanly against a
--- session flip (same key) instead of scrambling the trail.
+-- HS reports the focused mac window as a present place, including its stable window id so
+-- two windows of one app remain separate. In the terminal it also reports the current tmux
+-- session; the outer window and middle session rungs then both have a place to return to.
 local TX = "/opt/homebrew/bin/tmux"
-local lastapp
+local lastFocus
 local town   -- set in M.start; report_front is also called by the surface's app-watcher
 function M.report_front()
   local app = hs.application.frontmostApplication()
   local name = app and app:name()
-  if not name or name == "Hammerspoon" or name == lastapp then return end
+  if not name or name == "Hammerspoon" then return end
   -- only a regular app is a place. agents and background processes (UserNotificationCenter,
   -- loginwindow) take focus for a moment and can't be gone back to — a dead press in the trail.
   if app:kind() ~= 1 then return end
-  lastapp = name
+  local win = hs.window.focusedWindow()
+  if win and (not win:application() or win:application():name() ~= name or not win:isStandard()) then
+    win = nil
+  end
+  local focus = name .. ":" .. tostring(win and (win:id() or win:title()) or "")
+  if focus == lastFocus then return end
+  lastFocus = focus
+  local place = { kind = "window", app = name }
+  if win then place.winId, place.title = win:id(), win:title() end
+  town.talk("place", place)
   if name == "WezTerm" then
     -- the attached client's session — NOT `display-message` (which answers for tmux's
     -- most-recently-active client, i.e. the wrong window). Queried ASYNC via hs.task: a blocking
     -- hs.execute here spawned a process on the UI thread on EVERY terminal focus — the exact
     -- per-event stall the persistent bus exists to prevent. Talk the place from the callback.
     sh(TX .. " list-clients -F '#{client_session}' 2>/dev/null", function(_, out)
+      if hs.application.frontmostApplication() ~= app then return end
       local s = out and out:match("[^\r\n]+")
-      if s then town.talk("place", { kind = "session", name = s })
-      else town.talk("place", { kind = "window", app = name }) end   -- no tmux → the window itself
+      if s then town.talk("place", { kind = "session", name = s }) end
     end)
-  else
-    town.talk("place", { kind = "window", app = name })
   end
 end
 
@@ -152,10 +160,12 @@ function M.start(bus)
     end
   end
 
-  -- window filter: invalidate the window cache only when a window opens or closes
+  -- window filter: invalidate the index when windows change, and report focus changes
+  -- within the same app (the application watcher only sees app switches).
   winfilter = hs.window.filter.new()
   winfilter:subscribe({ hs.window.filter.windowCreated, hs.window.filter.windowDestroyed },
     function() win_cache = nil end)
+  winfilter:subscribe(hs.window.filter.windowFocused, function() M.report_front() end)
 
   -- town owns the menus; the surface says what exists when asked.
   -- the index: every place that exists, said as one `places` fact. Refreshed when a menu is
@@ -206,8 +216,13 @@ function M.start(bus)
       return                                        -- not running → launch it
     end
     local wins, target = a:allWindows(), nil
-    for _, win in ipairs(wins) do                   -- prefer the exact window if a title was saved
-      if p.title and p.title ~= "" and win:title() == p.title then target = win; break end
+    for _, win in ipairs(wins) do                   -- stable id first; titles change as content changes
+      if p.winId and win:id() == tonumber(p.winId) then target = win; break end
+    end
+    if not target then
+      for _, win in ipairs(wins) do
+        if p.title and p.title ~= "" and win:title() == p.title then target = win; break end
+      end
     end
     target = target or wins[1]                       -- else the app's window (favourites save no title)
     if not target then

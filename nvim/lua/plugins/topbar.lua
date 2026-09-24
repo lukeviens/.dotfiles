@@ -18,5 +18,7 @@ return {
 				return name:match("neo-tree") ~= nil or name:match("neo%-tree") ~= nil
 			end,
 		})
+		vim.keymap.set({ 'n', 'i' }, '<M-o>', '<Cmd>BufferPrevious<CR>', { desc = 'Previous buffer' })
+		vim.keymap.set({ 'n', 'i' }, '<M-i>', '<Cmd>BufferNext<CR>', { desc = 'Next buffer' })
 	end
 }

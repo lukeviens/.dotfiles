@@ -136,9 +136,17 @@ function M.start(town, windows, warm)
   leader:bind({}, "d", scrollKey("d"))
   leader:bind({}, "u", scrollKey("u"))
 
-  -- Caps o/i walk the same town trail from every app, including WezTerm.
-  leader:bind({}, "o", function() onKey("o") end)
-  leader:bind({}, "i", function() onKey("i") end)
+  -- Caps o/i walks the occupant at this depth. tmux decides whether its inner pane is
+  -- vim (buffers) or a shell (sessions); one rung out names sessions directly.
+  local function flip(press)
+    usedHold = true
+    local p = ladder.plan("flip", press, depth, DMAX, ctx())
+    if p.act == "wez" then windows.wez(p.verb, p.dir)
+    elseif p.act == "chrome-cycle" then chrome.cycleTab(p.step)
+    else town.talk("key", { at = p.at, press = p.dir }, "past") end
+  end
+  leader:bind({}, "o", function() flip("o") end)
+  leader:bind({}, "i", function() flip("i") end)
   leader:bind({ "shift" }, "return", function() onKey("S-return") end)
   leader:bind({ "shift" }, "t", function() onKey("T") end)   -- ⇧T → random theme
   leader:bind({ "shift" }, "/", function()   -- ? toggles the derived key card
