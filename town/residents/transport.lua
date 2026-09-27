@@ -28,10 +28,13 @@ local function nav(d)
   return defer("vim", "M-" .. d, wrap)
 end
 
--- scroll: defer to vim (native C-d/C-u half-page); anything else gets copy-mode's scrollback —
--- no per-program special cases, since a program can't be assumed to handle PageUp/PageDown.
-local function scroll(vk, way)
-  return defer("vim", vk, ("copy-mode -e ; send-keys -X halfpage-%s"):format(way))
+-- scroll: defer to vim (native C-d/C-u half-page). Otherwise an occupant on the alternate screen
+-- owns its own scroll — there is no scrollback for copy-mode to show — so it gets Page Up/Down
+-- (Claude Code, less, and the like); only a plain pane gets copy-mode's scrollback. The screen is
+-- the fact, not the program's name (which drifts: Claude Code's pane reads as its version number).
+local function scroll(vk, page, way)
+  local alt = ("if -F '#{alternate_on}' { send-keys %s } { copy-mode -e ; send-keys -X halfpage-%s }"):format(page, way)
+  return defer("vim", vk, alt)
 end
 
 -- the transport: { verb, dir, key HS injects, tmux command }. one table, two surfaces derive it.
@@ -45,12 +48,12 @@ for _, d in ipairs(ORDER) do
   row("edge-pane", d, "M-" .. x.compass, "resize-pane -" .. x.sel .. " 5")    -- push the wall, tmux only — no defer
   row("cell",  d, "M-C-" .. d,       "swap-pane -t '{" .. x.of .. "}'")       -- carry the tile
 end
-row("scroll", "d", "M-d",  scroll("C-d", "down"))   -- vim C-d, else copy-mode
-row("scroll", "u", "M-u",  scroll("C-u", "up"))     -- vim C-u, else copy-mode
+row("scroll", "d", "M-d",  scroll("C-d", "NPage", "down"))   -- vim C-d / alt-screen PageDown / copy-mode
+row("scroll", "u", "M-u",  scroll("C-u", "PPage", "up"))     -- vim C-u / alt-screen PageUp / copy-mode
 row("tab", "prev", "M-[", "previous-window")   -- tmux windows (tabs) — unconditional, no defer
 row("tab", "next", "M-]", "next-window")       -- one town rung out from pane/split point-nav
-row("flip",   "o", "M-o", defer("vim", "C-o", 'run-shell "$TOWN talk future back"'))     -- back: nvim jumplist, else the trail
-row("flip",   "i", "M-i", defer("vim", "C-i", 'run-shell "$TOWN talk future forward"'))  -- forward: the same
+row("flip",   "o", "M-o", defer("vim", "C-o", 'run-shell -b "$TOWN talk future back"'))     -- back: nvim jumplist, else the trail
+row("flip",   "i", "M-i", defer("vim", "C-i", 'run-shell -b "$TOWN talk future forward"'))  -- forward: the same
 row("split",  "lr", "M-%",  "split-window -h")       -- split left/right
 row("split",  "tb", "M-\"", "split-window -v")       -- split top/bottom
 

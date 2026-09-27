@@ -63,10 +63,10 @@ while :; do
 	rx="${1:-0}"; tx="${2:-0}"
 	disk=$(disk_bytes)
 
-	# CPU: top -l 2 -n 0 prints the CPU line twice, 1s apart; the second is
-	# a real delta (the first is since-boot and misleading). This blocks ~1s
-	# but we're in the background so the bar never waits on it.
-	cpu=$(top -l 2 -n 0 2>/dev/null | awk '/CPU usage/{u=$3; s=$5} END{gsub(/%/,"",u); gsub(/%/,"",s); printf "%.0f", u+s}')
+	# CPU: iostat -c 2 -w 1 prints the CPU columns twice, 1s apart; the second is a real
+	# delta. Kernel counters, so it costs nothing — top -l 2 walked every process for ~0.3s
+	# of CPU per sample, a tenth of a core forever. Last six columns: us sy id 1m 5m 15m.
+	cpu=$(iostat -c 2 -w 1 2>/dev/null | awk 'END{printf "%.0f", $(NF-5)+$(NF-4)}')
 	[ -z "$cpu" ] && cpu=0
 
 	# MEM used% from vm_stat: (active + wired + compressor-occupied) / total.
@@ -104,8 +104,9 @@ while :; do
  #[fg=${SUBTLE}]│\
  #[fg=${ACCENT}]DIO #[fg=${FG}]${dk_r} "
 
-	tmp="${CACHE}.tmp"
-	printf '%s' "$line" > "$tmp" && mv -f "$tmp" "$CACHE"
+	# hand the bar its line as a tmux option: #{@sysstat} expands with no process spawned,
+	# where #(cat file) forked a shell per client every status-interval.
+	tmux set -g @sysstat "$line" 2>/dev/null
 
 	prev_rx="$rx"; prev_tx="$tx"; prev_disk="$disk"; prev_t="$now"
 	sleep "$INTERVAL"

@@ -135,4 +135,8 @@ config.keys = {
   { key = 'l', mods = 'ALT', action = wezterm.action.SendString('\x1bl') },
 }
 
+-- macOS: plain letters go through the input-method layer, control chords don't. After a macOS
+-- update that layer started eating letters in this build (typing dead, ⌃C fine). Bypass it.
+config.use_ime = false
+
 return config

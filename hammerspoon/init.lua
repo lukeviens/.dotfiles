@@ -105,6 +105,11 @@ local function perf_suite()
     { name = "picker.open.delta", before = function() picker.show(popts) end,  -- repeat while up (spam path)
       run = function() picker.show(popts) end, after = function() picker.hide() end },
     { name = "picker.open.fresh", run = function() picker.hide(); picker.show(popts) end, reps = 3 },
+    -- the dance, in parts (the lag was hswindow(): one AX search per open, ~1.6s)
+    { name = "picker.hide.only",  before = function() picker.show(popts) end, run = function() picker.hide() end, reps = 3 },
+    { name = "picker.show.only",  before = function() picker.hide() end, run = function() picker.show(popts) end, reps = 3 },
+    { name = "windows.ordered",   run = function() hs.window.orderedWindows() end, reps = 5 },
+    { name = "windows.filter",    run = function() hs.window.filter.default:getWindows() end, reps = 5 },
   }
 end
 

@@ -246,18 +246,20 @@ end
 local function grabKey(mine, n)
   if epoch ~= mine then return end
   grabTimer = nil
-  local win = wv and wv:hswindow()
-  if win then
-    win:focus()
-    wv:evaluateJavaScript(
-      "(function(){var q=document.getElementById('q');if(q)q.focus();return document.activeElement===q})()",
-      function(ok)
-        if epoch ~= mine or ok == true then return end   -- superseded, or the field is key → done
-        if n > 0 then grabTimer = hs.timer.doAfter(0.04, function() grabKey(mine, n - 1) end) end
-      end)
-  elseif n > 0 then
-    grabTimer = hs.timer.doAfter(0.04, function() grabKey(mine, n - 1) end)
-  end
+  if not wv then return end
+  -- make the window key: activate HS by pid (NSRunningApplication, no search), then show() again,
+  -- which is makeKeyAndOrderFront and only takes once the app is active. (It used to be
+  -- wv:hswindow():focus() — the same result via an AX search of every window on the machine,
+  -- ~1.6s on an M1 Pro. That one call was the whole of the picker's lag.)
+  local me = hs.application.applicationForPID(hs.processInfo.processID)
+  if me then me:activate(true) end
+  wv:show()
+  wv:evaluateJavaScript(
+    "(function(){var q=document.getElementById('q');if(q)q.focus();return document.activeElement===q})()",
+    function(ok)
+      if epoch ~= mine or ok == true then return end   -- superseded, or the field is key → done
+      if n > 0 then grabTimer = hs.timer.doAfter(0.04, function() grabKey(mine, n - 1) end) end
+    end)
 end
 
 -- wake onto `opts`. ASLEEP → the window dance, exactly once (place · push · show · grab key).

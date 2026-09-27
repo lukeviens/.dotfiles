@@ -35,4 +35,4 @@ NET_IFACE="$NET_IFACE" DISK_DEV="$DISK_DEV" \
 echo $! > "$PIDFILE"
 
 # Seed the cache so the bar has something to show before the first sample.
-[ -f "$CACHE" ] || printf '#[fg=%s]CPU #[fg=%s]…' "$C_ACCENT" "$C_FG" > "$CACHE"
+[ -n "$(tmux show -gv @sysstat 2>/dev/null)" ] || tmux set -g @sysstat "#[fg=${C_ACCENT}]CPU #[fg=${C_FG}]…"

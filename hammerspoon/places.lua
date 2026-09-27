@@ -48,7 +48,9 @@ function M.list_windows(fresh)
   if fresh then win_cache = nil end          -- force a cold rebuild (the perf suite uses this)
   if win_cache then return win_cache end
   local out = {}
-  for _, w in ipairs(hs.window.orderedWindows()) do
+  -- the filter keeps the visible standard windows current from events, so this list is ~0.4ms;
+  -- hs.window.orderedWindows() walked all ~200 windows through AX: 75ms idle, 1.5s under load.
+  for _, w in ipairs(winfilter and winfilter:getWindows() or hs.window.orderedWindows()) do
     local title = w:title()
     if w:isStandard() and title ~= "" then
       local app = w:application()
@@ -111,6 +113,9 @@ function M.report_front()
   local app = hs.application.frontmostApplication()
   local name = app and app:name()
   if not name or name == "Hammerspoon" or name == lastapp then return end
+  -- only a regular app is a place. agents and background processes (UserNotificationCenter,
+  -- loginwindow) take focus for a moment and can't be gone back to — a dead press in the trail.
+  if app:kind() ~= 1 then return end
   lastapp = name
   if name == "WezTerm" then
     -- the attached client's session — NOT `display-message` (which answers for tmux's
