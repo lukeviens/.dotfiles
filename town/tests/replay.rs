@@ -20,8 +20,8 @@ fn replay_a_flow_captures_connector_effects() {
             "body": { "name": "dark", "mode": "dark", "bg": "#1f1d20", "fg": "#f8f8f2", "subtle": "#878787", "active": "#f92672", "accent": "#66d9ef" } }),
         json!({ "kind": "place", "tense": "present", "body": { "kind": "window", "app": "Chrome" } }),
         json!({ "kind": "place", "tense": "present", "body": { "kind": "session", "name": "work" } }),
-        json!({ "kind": "back", "tense": "future", "body": {} }),
-        json!({ "kind": "jump", "tense": "future", "body": { "slot": 1 } }),
+        json!({ "kind": "place", "tense": "future", "body": { "step": 1 } }),
+        json!({ "kind": "place", "tense": "future", "body": { "slot": 1 } }),
     ];
     golden("replay_flow", &serde_json::to_string_pretty(&replay(&seq)).unwrap());
 }

@@ -1,13 +1,12 @@
--- menu — the UI as words. A `pick` becomes a `show`; a `chose` becomes going there;
--- a `favourite` pins the choice. town decides what to show and what a pick means; the surface
--- renders labels, reports ids, and gathers the live lists (apps/windows/sessions) on request.
--- Recent places come from town's own past. Every choice is a place, so choosing one is just
--- `place`(future) — which the owning surface obeys. Every choice also carries `uses` — times
+-- menu — one noun, three tenses. Future by `what`: wished for; answered at once from the `places`
+-- index with a future by `choices`, which the surface shows — and again when the surface refreshes
+-- the index under it. Present: it's up. Past { id?, slot? }: how it ended — go there, pin it, or
+-- nothing. Recent places come from town's own past. Every choice also carries `uses` — times
 -- you've picked exactly that place — so a fuzzy tie in the picker breaks by habit, not alphabet
--- ("we" → WezTerm, not Weather); kept in a file, not a present fact, since `chose` is a
--- past-tense event nothing else ever reads back through town.
+-- ("we" → WezTerm, not Weather); kept in a file, not a present fact — nothing else reads it.
 local USAGE = os.getenv("HOME") .. "/.cache/town/usage"
 local shown = {}
+local wanted            -- the `what` of the menu currently wished for, or nil
 
 local function label(p)
   if p.kind == "session" then return p.name .. "  ·  session" end
@@ -44,7 +43,7 @@ local function bump(p)              -- one more pick of p — read, increment, r
   emit(USAGE, table.concat(lines))
 end
 
-local function menu(places)          -- remember them; show labels + an icon hint (app/kind)
+local function menu(places)          -- remember them; the menu by its choices: labels + an icon hint
   shown = places
   local usage = loadUsage()
   local choices = {}
@@ -52,7 +51,7 @@ local function menu(places)          -- remember them; show labels + an icon hin
     choices[i] = { id = tostring(i), label = label(p), app = p.app or p.name, kind = p.kind,
       uses = usage[pkey(p)] or 0 }
   end
-  return intent("show", { choices = choices })
+  return intent("menu", { choices = choices })
 end
 
 local function recent(places)        -- most-recent-first (everywhere() dedups by pkey)
@@ -75,18 +74,29 @@ local function everywhere(live)
   return out
 end
 
+local function select(what, places)  -- the index, cut to `what`; `all` puts town's recent places in front
+  if what == "all" then return everywhere(places) end
+  local kind = ({ apps = "app", windows = "window", sessions = "session" })[what]
+  local out = {}
+  for _, p in ipairs(places or {}) do if p.kind == kind then out[#out + 1] = p end end
+  return out
+end
+
 return react {
-  on("pick", function(w) return intent("gather", { what = w.body.what }) end),   -- ask the surface
-  on("apps", function(w) return menu(w.body.places or {}) end),       -- the surface gathered them
-  on("windows", function(w) return menu(w.body.places or {}) end),
-  on("sessions", function(w) return menu(w.body.places or {}) end),
-  on("everything", function(w) return menu(everywhere(w.body.places)) end),  -- live list + town's places & sessions
-  on("chose", function(w)
-    local p = shown[tonumber(w.body.id)]
-    if p then bump(p); return intent("place", p) end
+  on({ kind = "menu", tense = "future", by = "what" }, function(w)
+    wanted = w.body.what
+    local index = present("places")
+    if index and index.places then return menu(select(wanted, index.places)) end   -- else the refresh answers
   end),
-  on("favourite", function(w)
+  on({ kind = "places", tense = "present" }, function(w)
+    if wanted then return menu(select(wanted, (w.body or {}).places)) end
+  end),
+  on({ kind = "menu", tense = "past" }, function(w)
+    wanted = nil
     local p = shown[tonumber(w.body.id)]
-    if p then return intent("save", { slot = w.body.slot, place = p }) end
+    if not p then return end
+    if w.body.slot then return intent("favourites", { slot = w.body.slot, place = p }) end
+    bump(p)
+    return intent("place", p)
   end),
 }

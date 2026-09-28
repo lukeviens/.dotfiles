@@ -37,12 +37,14 @@ end
 -- this runtime. (The Hammerspoon surface keeps its own copy; it's a separate process.)
 bins = { tmux = "/opt/homebrew/bin/tmux", nvim = "/opt/homebrew/bin/nvim" }
 
-function pick(what)    return intent("pick", { what = what }, what) end
--- back/forward: flip through the trail of one kind (or all, when kind is nil).
-local function flip(way, kind) return intent(way, { kind = kind }, kind and ("flip " .. kind .. "s") or "flip") end
-function back(kind)    return flip("back", kind)    end
-function forward(kind) return flip("forward", kind) end
-function jump(slot)    return intent("jump", { slot = slot }, "favourites") end
+function pick(what)    return intent("menu", { what = what }, what) end   -- the menu should show `what`
+-- a place named relatively: `step` along the trail of one kind (or all, when kind is nil) —
+-- back is +1, forward −1; `slot` a favourite. The trail / favourites resolve it to a place by
+-- name, which its surface enters. A verb is a noun in the future tense.
+local function flip(step, kind) return intent("place", { step = step, kind = kind }, kind and ("flip " .. kind .. "s") or "flip") end
+function back(kind)    return flip(1, kind)  end
+function forward(kind) return flip(-1, kind) end
+function jump(slot)    return intent("place", { slot = slot }, "favourites") end
 function grep()        return intent("grep", nil, "grep") end
 -- retheme: cycle the palette (or `to = "random"`). The theme resident writes the next skin to the
 -- shared colours file; every surface re-colours off that one file. (A future `theme` — an intent.)
@@ -50,24 +52,24 @@ function retheme(to, label) return intent("theme", { to = to or "next" }, label 
 
 -- aware: a key the surface binds directly to its own action (a chord, for speed — not routed as a
 -- word per press); context-aware — the surface disables it wherever the terminal
--- wants that key (nvim/tmux own ⌃hjkl / ⌃⏎ there) and forwards `move` at its edge.
+-- wants that key (nvim/tmux own ⌃⏎ there).
 function aware(name) return { act = name, aware = true } end
 
 -- surface: a key the surface handles entirely on its own (a local mode or gesture, not a routed
--- word) — declared here ONLY so it shows in the hint. keeps the map the whole doc even for keys
+-- word) — declared here ONLY so it shows on the ? card. keeps the map the whole doc even for keys
 -- whose mechanism lives in the surface (e.g. HS's resize sub-mode, hjkl glide inside the terminal).
 function surface(label) return { surface = true, label = label } end
 
--- move: shift focus one window in a direction. the surface obeys; the terminal's
--- edge-crossing talks the same word, so focus is one vocabulary everywhere.
+-- move: shift focus one window in a direction. the surface obeys.
 function move(dir) return intent("move", { dir = dir }, "point") end
 
 -- arrange: position the focused window — `to` is "max" (maximize ↔ restore, fill the
 -- screen). the surface owns the geometry.
 function arrange(to, label) return intent("arrange", { to = to }, label) end
 
--- keymap: "<where> <key>" → an intention. Surfaces report keys as `key {at, press}`.
--- Also answers a `hint {at}` with the menu for that surface — so the hint is the map.
+-- keymap: "<where> <key>" → an intention. Surfaces report keys as `key {at, press}`. The map
+-- itself is written as a substrate the surfaces read (see below) — the ? card and the chords a
+-- surface binds directly derive from the one table, so the card is the map.
 function keymap(map)
   local function hint(at)
     local by, order = {}, {}
@@ -96,30 +98,43 @@ function keymap(map)
     return out
   end
 
+  -- the map as a substrate the surface reads (~/.cache/town/keys), like the transport manifest:
+  -- one line per item, tab-separated. `hint <at> <keys> <label>` for the ? card; `bind <key>
+  -- <act> [aware]` for the chords a surface binds itself. Written at load; the surface reads it.
+  local lines = {}
+  for _, it in ipairs(hint("leader")) do lines[#lines + 1] = table.concat({ "hint", "leader", it.keys, it.label }, "\t") end
+  for _, b in ipairs(wiring()) do
+    lines[#lines + 1] = table.concat({ "bind", b.key, b.act, b.aware and "aware" or "" }, "\t")
+  end
+  emit(os.getenv("HOME") .. "/.cache/town/keys", table.concat(lines, "\n") .. "\n")
+
   return {
-    listen = { "key", "hint", "wire" },
+    listen = { "key" },
     talk = function(w)
-      if w.kind == "hint" then
-        return event("hints", { at = w.body.at, items = hint(w.body.at or "leader") })
-      elseif w.kind == "wire" then
-        return event("wiring", { binds = wiring() })
-      end
       local v = map[(w.body.at or "") .. " " .. (w.body.press or "")]
       if v and not v.act and not v.surface then return v end   -- acts/surface keys are handled at the surface
     end,
   }
 end
 
--- on: a talk clause — match a word by kind (+ optional tense / body predicate), run act(w).
---   on("colors", fn)  ·  on({ kind = "place", tense = "future", where = fn(body) }, fn)
+-- on: a talk clause — match a word by kind, tense, and what it goes by; run act(w). A word can name
+-- its referent by a field (a future place by `step`, by `slot`, by name) — `by = "step"` is a
+-- word that has one; `by = { kind = "session" }` a word whose fields are these.
+--   on("colors", fn)  ·  on({ kind = "place", tense = "future", by = "slot" }, fn)
 function on(spec, act)
   if type(spec) == "string" then spec = { kind = spec } end
+  local by = spec.by
   return {
     kind = spec.kind,
     match = function(w)
       if spec.kind and w.kind ~= spec.kind then return false end
       if spec.tense and (w.tense or "present") ~= spec.tense then return false end
-      if spec.where and not spec.where(w.body) then return false end
+      if by then
+        local b = w.body
+        if type(b) ~= "table" then return false end
+        if type(by) == "string" then return b[by] ~= nil end
+        for k, v in pairs(by) do if b[k] ~= v then return false end end
+      end
       return true
     end,
     act = act,
@@ -147,10 +162,11 @@ function when(kind, action)
 end
 
 -- trail: recent places of one kind, walked like ⌘-tab. A present `over` fact promotes that place
--- to the front (deduped by `id`) and homes the cursor; back/forward step the cursor and talk a
--- future `over` for the surface to re-enter. A flip's own echo — the surface reporting back the
--- focus we just caused — arrives as a present fact whose key matches the cursor (`seen[at]`); that
--- case is ignored so only a genuinely different focus reorders the list.
+-- to the front (deduped by `id`) and homes the cursor; a future `over` with a `step` moves the
+-- cursor and talks a future `over` by name for the surface to enter; a past `over` is a place
+-- that is no more. A flip's own echo — the surface reporting back the focus we just caused —
+-- arrives as a present fact whose key matches the cursor (`seen[at]`); that case is ignored so
+-- only a genuinely different focus reorders the list.
 function trail(over, id)
   local seen, at = {}, 1
   local last            -- the flip in flight {dir, of}: if it lands on a place that's gone, it carries on
@@ -164,17 +180,21 @@ function trail(over, id)
     end
   end
   return {
-    listen = { over, "back", "forward", "gone" },
+    listen = { over },
     talk = function(w)
-      if w.kind == over then
-        if w.tense ~= "present" then return end        -- only facts extend the trail
-        if seen[at] and key(w.body) == key(seen[at]) then return end  -- our flip's own echo — hold the cursor
-        for i, p in ipairs(seen) do if key(p) == key(w.body) then table.remove(seen, i); break end end
-        table.insert(seen, 1, w.body); at = 1          -- a different focus → promote to front, cursor home
-      elseif w.kind == "gone" then
-        -- a place that is no more (its surface said so): drop it. if it's where the cursor just
-        -- landed, the press that got there hasn't happened yet — carry the flip on past it.
-        local k = key(w.body)
+      local b = w.body or {}
+      if w.tense == "future" then
+        -- a relative name (`step`) is ours to resolve; a place by name is for its surface
+        local step = tonumber(b.step)
+        if step then return flip(step, b.kind) end
+      elseif w.tense == "present" then
+        if seen[at] and key(b) == key(seen[at]) then return end  -- our flip's own echo — hold the cursor
+        for i, p in ipairs(seen) do if key(p) == key(b) then table.remove(seen, i); break end end
+        table.insert(seen, 1, b); at = 1          -- a different focus → promote to front, cursor home
+      else
+        -- past: a place that is no more (its surface said so). drop it; if it's where the cursor
+        -- just landed, the press that got there hasn't happened yet — carry the flip on past it.
+        local k = key(b)
         for i, p in ipairs(seen) do
           if key(p) == k then
             table.remove(seen, i)
@@ -187,8 +207,6 @@ function trail(over, id)
             break
           end
         end
-      else
-        return flip((w.kind == "back") and 1 or -1, w.body and w.body.kind)
       end
     end,
   }

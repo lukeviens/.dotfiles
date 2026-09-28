@@ -1,7 +1,7 @@
 -- windows.lua — mac window management: directional focus, grow/shrink (edge), snap-to-half (cell),
 -- maximize↔restore, the transport byte-injection (wez), and binding town's one keymap chord (⌃⏎,
--- dimmed inside the terminal). Windows float and are managed here in HS; town routes only the
--- `move` word — Caps hjkl's outermost depth rung, the sole way to reach a mac window from here.
+-- dimmed inside the terminal). Windows float and are managed here in HS; town routes `move` (Caps
+-- hjkl's outermost rung) and `arrange`; `vim` tells the chords when the terminal owns the key.
 local M = {}
 local sh = require("sh")
 
@@ -134,8 +134,8 @@ end
 -- binds it. zoom/maximize carry no direction.
 local ACT = { zoom = maximize }   -- the only direct chord left: ⌃⏎ (mac max; tmux zooms the pane)
 local townchords, townnav = {}, {}   -- held (module-rooted via M.stop) or HS garbage-collects the hotkeys
--- `aware` chords go quiet in the terminal, where nvim/tmux own that key (and forward `move`
--- at their edge); everything else stays live everywhere.
+local keyswatch                      -- rebinds the chords when town rewrites ~/.cache/town/keys
+-- `aware` chords go quiet in the terminal, where nvim/tmux own that key; the rest stay live.
 function M.nav_mode()   -- exposed: the surface's app-watcher calls it the instant focus changes
   local inside = M.in_term()
   for _, hk in ipairs(townnav) do if inside then hk:disable() else hk:enable() end end
@@ -145,10 +145,11 @@ function M.start(town)
   town.listen("move", function(w) focus(w.body.dir) end)
   town.listen("vim", function(w) vimActive = (w.body.active == "1") end)
 
-  town.listen("wiring", function(w)
+  -- the chords the surface binds itself, from the keymap's substrate — rebound whenever town rewrites it
+  local function wire()
     for _, hk in ipairs(townchords) do hk:delete() end
     townchords, townnav = {}, {}
-    for _, b in ipairs(w.body.binds or {}) do
+    for _, b in ipairs(require("keys").binds()) do
       local mods = {}
       for tok in b.key:gmatch("%S+") do mods[#mods + 1] = tok end
       local key = table.remove(mods)                 -- last token is the key; the rest are mods
@@ -161,7 +162,9 @@ function M.start(town)
       end
     end
     M.nav_mode()
-  end)
+  end
+  wire()
+  keyswatch = hs.pathwatcher.new(HOME .. "/.cache/town/keys", wire):start()
 
   -- arrange the focused window — `max` maximizes ↔ restores (Caps ⏎ / ⇧⏎, and the ⌃⏎ chord).
   town.listen("arrange", function(w)
@@ -174,6 +177,7 @@ end
 
 function M.stop()   -- teardown + GC anchor (its upvalue keeps the chord hotkeys reachable)
   for _, hk in ipairs(townchords or {}) do pcall(function() hk:delete() end) end
+  if keyswatch then pcall(function() keyswatch:stop() end) end
 end
 
 return M

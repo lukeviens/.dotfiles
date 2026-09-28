@@ -4,6 +4,21 @@
 local theme = require("theme")
 local M = {}
 
+local function color(hex) return { hex = hex, alpha = 1.0 } end
+-- one in-theme alert style: a bg fill + a palette stroke; the rest defaults
+function M.style(o)
+  return {
+    fillColor = color(theme.bg), strokeColor = color(o.stroke),
+    textColor = color(o.text or theme.fg),
+    strokeWidth = o.sw or 2, radius = o.radius or 8, textSize = o.size or 14,
+  }
+end
+-- a small, in-theme toast (the raw hs.alert is huge and off-palette)
+function M.toast(msg, secs)
+  hs.alert.closeAll()
+  hs.alert.show(msg, M.style{ stroke = theme.accent, sw = 1, size = 13 }, secs or 0.7)
+end
+
 -- the badge: a small overlay canvas (NOT the menu bar), same corner every time — recomputed
 -- against the CURRENT primaryScreen on every show, so a resolution/arrangement change since the
 -- last show can't leave it parked at a stale, now-wrong position.
@@ -36,27 +51,41 @@ function M.showBadge() badge:frame(badgeFrame()); badge:show() end
 -- the `?` reference card: a themed canvas built LIVE from the hint items (which town derives from
 -- the keymap — keys.lua is the one doc). Rebuilt each open so it reflects the current map + palette.
 local card
+local page                                        -- which card is up: "keys" | "time" | nil
 function M.hideCard()
+  page = nil
   if card then pcall(function() card:delete() end); card = nil end
 end
-function M.cardShown() return card ~= nil end
-function M.showCard(items)
-  M.hideCard()
-  items = items or {}
-  if #items == 0 then return end
-  local ncols = (#items > 7) and 2 or 1
-  local rows  = math.ceil(#items / ncols)
-  local PAD, TITLE, ROW, FOOT = 22, 40, 26, 30      -- paddings + title/row/footer bands
-  local KEYW, GAP, LBLW = 82, 12, 150               -- key column (right-aligned) | gap | label column
-  local colW = KEYW + GAP + LBLW
-  local W, H = PAD * 2 + colW * ncols, PAD + TITLE + rows * ROW + FOOT
+function M.cardShown(which) return card ~= nil and (which == nil or page == which) end
+
+local PAD, TITLE, ROW, FOOT = 22, 40, 26, 30      -- paddings + title/row/footer bands
+-- the card's frame: a rounded panel centred on the primary screen with a title and a footer.
+-- returns the canvas; the caller appends rows and shows it.
+local function frame(W, H, title, foot)
   local scr = hs.screen.primaryScreen():frame()
   local c = hs.canvas.new({ x = scr.x + (scr.w - W) / 2, y = scr.y + (scr.h - H) / 2, w = W, h = H })
   c:appendElements(
     { type = "rectangle", action = "fill", roundedRectRadii = { xRadius = 14, yRadius = 14 },
       fillColor = { hex = theme.bg, alpha = 0.97 }, strokeColor = { hex = theme.active }, strokeWidth = 1.5 },
-    { type = "text", text = "◆ town", textColor = { hex = theme.accent }, textSize = 15,
-      textFont = "Menlo-Bold", textAlignment = "left", frame = { x = PAD, y = PAD - 2, w = W - PAD * 2, h = 24 } })
+    { type = "text", text = title, textColor = { hex = theme.accent }, textSize = 15,
+      textFont = "Menlo-Bold", textAlignment = "left", frame = { x = PAD, y = PAD - 2, w = W - PAD * 2, h = 24 } },
+    { type = "text", text = foot, textColor = { hex = theme.subtle }, textSize = 12,
+      textFont = "Menlo", textAlignment = "left", frame = { x = PAD, y = H - FOOT + 6, w = W - PAD * 2, h = 20 } })
+  c:level(hs.canvas.windowLevels.overlay)
+  return c
+end
+local function up(c, which) M.hideCard(); c:show(); card, page = c, which end
+
+-- the key card: { keys, label } items, key column right-aligned, two columns past seven rows.
+function M.showCard(items)
+  items = items or {}
+  if #items == 0 then return end
+  local ncols = (#items > 7) and 2 or 1
+  local rows  = math.ceil(#items / ncols)
+  local KEYW, GAP, LBLW = 82, 12, 150
+  local colW = KEYW + GAP + LBLW
+  local W, H = PAD * 2 + colW * ncols, PAD + TITLE + rows * ROW + FOOT
+  local c = frame(W, H, "◆ town", "?  time  ·  esc closes")
   for i, it in ipairs(items) do
     local col, r = math.floor((i - 1) / rows), (i - 1) % rows   -- fill column-major
     local x, y = PAD + col * colW, PAD + TITLE + r * ROW
@@ -66,12 +95,33 @@ function M.showCard(items)
       { type = "text", text = it.label, textColor = { hex = theme.fg }, textSize = 13,
         textFont = "Menlo", textAlignment = "left", frame = { x = x + KEYW + GAP, y = y, w = LBLW, h = ROW } })
   end
-  c:appendElements(
-    { type = "text", text = "esc  ·  ? closes", textColor = { hex = theme.subtle }, textSize = 12,
-      textFont = "Menlo", textAlignment = "left", frame = { x = PAD, y = H - FOOT + 6, w = W - PAD * 2, h = 20 } })
-  c:level(hs.canvas.windowLevels.overlay)
-  c:show()
-  card = c
+  up(c, "keys")
+end
+
+-- a table card: t = { page, title, foot, head = {…}, rows = {{…, mark=?}}, widths = {…} (px) }.
+-- Each cell is its own text element: the first column left-aligned, the rest right; the head in
+-- the subtle colour, a row's `mark` (e.g. "!") after it in the active colour.
+function M.showTable(t)
+  local GAP, MARKW = 18, 24
+  local W = PAD * 2 + MARKW
+  for _, w in ipairs(t.widths) do W = W + w + GAP end
+  local H = PAD + TITLE + (#t.rows + 1) * ROW + FOOT
+  local c = frame(W, H, t.title, t.foot)
+  local function cells(row, y, colour, font)
+    local x = PAD
+    for i, w in ipairs(t.widths) do
+      c:appendElements({ type = "text", text = tostring(row[i] or ""), textColor = { hex = colour }, textSize = 13,
+        textFont = font, textAlignment = (i == 1) and "left" or "right", frame = { x = x, y = y, w = w, h = ROW } })
+      x = x + w + GAP
+    end
+    if row.mark then
+      c:appendElements({ type = "text", text = row.mark, textColor = { hex = theme.active }, textSize = 13,
+        textFont = "Menlo-Bold", textAlignment = "left", frame = { x = x, y = y, w = MARKW, h = ROW } })
+    end
+  end
+  cells(t.head, PAD + TITLE, theme.subtle, "Menlo")
+  for i, r in ipairs(t.rows) do cells(r, PAD + TITLE + i * ROW, theme.fg, "Menlo") end
+  up(c, t.page)
 end
 
 function M.reset()   -- hide all chrome (every mode exit lands here)

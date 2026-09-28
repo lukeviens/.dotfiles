@@ -1,6 +1,7 @@
--- favourites — pinned places on slots 1-9. `save` remembers a place (a present fact,
--- so it persists via the past→present fold); `jump` recalls it and goes there. A slot
--- falls back to DEFAULTS until you pin your own (press 1-9 in the picker to pin).
+-- favourites — pinned places on slots 1-9. A future `favourites` { slot, place } pins one (the
+-- present fact persists via the past→present fold); a future `place` { slot } is a place named
+-- by number, resolved to the pinned place and talked by name. A slot falls back to DEFAULTS
+-- until you pin your own (press 1-9 in the picker to pin).
 local DEFAULTS = {
   ["1"] = { kind = "window", app = "WezTerm" },
   ["2"] = { kind = "window", app = "Google Chrome" },
@@ -8,12 +9,12 @@ local DEFAULTS = {
   ["4"] = { kind = "window", app = "Spotify" },
 }
 return react {
-  on("save", function(w)
+  on({ kind = "favourites", tense = "future" }, function(w)
     local faves = present("favourites") or {}
     faves[tostring(w.body.slot)] = w.body.place
     return fact("favourites", faves)
   end),
-  on("jump", function(w)
+  on({ kind = "place", tense = "future", by = "slot" }, function(w)
     local faves = present("favourites") or {}
     local slot = tostring(w.body.slot)
     local p = faves[slot] or DEFAULTS[slot]   -- your pin, else the default

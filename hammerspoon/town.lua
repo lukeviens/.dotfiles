@@ -19,7 +19,10 @@ end
 local function dispatch(line)            -- one incoming word → its listeners, by kind
   local ok, w = pcall(hs.json.decode, line)
   if ok and w and w.kind and M.on[w.kind] then
-    for _, fn in ipairs(M.on[w.kind]) do fn(w) end
+    for _, fn in ipairs(M.on[w.kind]) do   -- one bad listener must not take the bus down with it
+      local ok, err = pcall(fn, w)
+      if not ok then hs.printf("town: listener for '%s' errored: %s", w.kind, tostring(err)) end
+    end
   end
 end
 
@@ -43,13 +46,11 @@ local function join()                    -- open (or reopen) the one connection 
     lastRx = hs.timer.secondsSinceEpoch()
     sq:write("join\n")
     sq:read("\n")                        -- start the read loop
-    M.talk("hint", { at = "leader" }, "future")  -- (re)fetch the menu + keymap on connect
-    M.talk("wire", nil, "future")
   end)
 end
 
 -- boot town's residents, open the connection, and start the reconnect heartbeat. Call once,
--- AFTER every listener is registered, so nothing misses the first hint/wire on connect.
+-- AFTER every listener is registered, so nothing misses the present the square greets us with.
 function M.start()
   hs.task.new(TOWN, nil, {}):start()   -- boot town (raises its residents from residents.lua)
   join()

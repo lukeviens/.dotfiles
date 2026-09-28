@@ -1,74 +1,555 @@
 {
-  "colors": "# shared palette\nname=dark\nmode=dark\nbg=#1f1d20\nfg=#f8f8f2\nsubtle=#878787\nactive=#f92672\naccent=#66d9ef\nbase00=#1f1d20\nbase01=#3e3c3e\nbase02=#5d5c5c\nbase03=#878787\nbase04=#9b9a98\nbase05=#bab9b6\nbase06=#d9d9d4\nbase07=#f8f8f2\nbase08=#fa4c8b\nbase09=#fa564c\nbase0A=#fa9f4c\nbase0B=#8bfa4c\nbase0C=#4cfaad\nbase0D=#4ce2fa\nbase0E=#824cfa\nbase0F=#fa4c5f\n",
-  "favourites": {
-    "1": {
-      "app": "Chrome",
-      "kind": "window"
-    },
-    "2": {
-      "app": "WezTerm",
-      "kind": "window"
-    },
-    "3": {
-      "app": "Slack",
-      "kind": "window"
-    },
-    "4": {
-      "kind": "app",
-      "name": "Spotify"
-    }
-  },
+  "colors": "# shared palette\nname=tok_ca7ae63\nmode=dark\nbg=#17121c\nfg=#f0edf2\nsubtle=#776388\nactive=#a143f4\naccent=#e571c4\nbase00=#17121c\nbase01=#36313b\nbase02=#555159\nbase03=#776388\nbase04=#938f96\nbase05=#b2aeb5\nbase06=#d1ced3\nbase07=#f0edf2\nbase08=#a852f5\nbase09=#ec52f5\nbase0A=#f552b9\nbase0B=#f5a852\nbase0C=#acf552\nbase0D=#52f557\nbase0E=#52d5f5\nbase0F=#d152f5\n",
   "focus": {
-    "cwd": "/Users/tok_c6334b6/code/tok_2de036d-tok_657528b",
-    "pane": "%143",
-    "socket": "/var/folders/tok_86cdc88/tok_fb120bc/T/nvim.tok_c6334b6/tok_4d64f35/nvim.39109.0"
+    "cwd": "/Users/tok_0b291c6/tok_43042a3",
+    "pane": "%17",
+    "socket": "/var/folders/tok_4ec45a1/tok_70e2351/T/nvim.tok_0b291c6/tok_9c9f743/nvim.63103.0"
   },
-  "gather": {
-    "tense": "tok_5984c2b",
-    "what": "all"
-  },
-  "key": {
-    "at": "leader",
-    "press": "tok_cf0fa26",
-    "tense": "tok_689fe18"
-  },
-  "pick": {
-    "what": "apps"
-  },
-  "ping": {
-    "n": "10",
-    "tense": "tok_5984c2b"
+  "menu": {
+    "n": 116
   },
   "place": {
-    "app": "Slack",
-    "kind": "window"
+    "kind": "session",
+    "name": "config"
+  },
+  "places": {
+    "places": [
+      {
+        "kind": "app",
+        "name": ".tok_51059fe-tok_adfd443-tok_619a100"
+      },
+      {
+        "kind": "app",
+        "name": "1Password"
+      },
+      {
+        "kind": "app",
+        "name": "tok_6d81bf0 tok_4d7dbc5"
+      },
+      {
+        "kind": "app",
+        "name": "tok_c754574 tok_164e663"
+      },
+      {
+        "kind": "app",
+        "name": "tok_dac5150 tok_68572ff"
+      },
+      {
+        "kind": "app",
+        "name": "tok_38baa90 tok_c7e864a"
+      },
+      {
+        "kind": "app",
+        "name": "tok_618d875 tok_48d3d50 tok_50009a2"
+      },
+      {
+        "kind": "app",
+        "name": "tok_37c3c45"
+      },
+      {
+        "kind": "app",
+        "name": "tok_9214439 tok_d3956b7 tok_8baeb1c"
+      },
+      {
+        "kind": "app",
+        "name": "tok_465c915"
+      },
+      {
+        "kind": "app",
+        "name": "tok_01ee249 tok_0b9df68 tok_e3048c3"
+      },
+      {
+        "kind": "app",
+        "name": "Calculator"
+      },
+      {
+        "kind": "app",
+        "name": "tok_2db38fb"
+      },
+      {
+        "kind": "app",
+        "name": "tok_9af692b"
+      },
+      {
+        "kind": "app",
+        "name": "tok_1317883 Code tok_854f9c2 tok_4646277"
+      },
+      {
+        "kind": "app",
+        "name": "tok_1317883"
+      },
+      {
+        "kind": "app",
+        "name": "tok_5c13e41"
+      },
+      {
+        "kind": "app",
+        "name": "tok_7ee6d97 tok_164e663"
+      },
+      {
+        "kind": "app",
+        "name": "tok_383dbb6"
+      },
+      {
+        "kind": "app",
+        "name": "tok_b44178c"
+      },
+      {
+        "kind": "app",
+        "name": "tok_7e4d651"
+      },
+      {
+        "kind": "app",
+        "name": "tok_a5e4b1f tok_f10b294 tok_48b3fe6"
+      },
+      {
+        "kind": "app",
+        "name": "Discord"
+      },
+      {
+        "kind": "app",
+        "name": "tok_69fa488 tok_164e663"
+      },
+      {
+        "kind": "app",
+        "name": "tok_3780ee1"
+      },
+      {
+        "kind": "app",
+        "name": "tok_1b7dd91"
+      },
+      {
+        "kind": "app",
+        "name": "tok_4909090"
+      },
+      {
+        "kind": "app",
+        "name": "tok_27b697c tok_01ed664"
+      },
+      {
+        "kind": "app",
+        "name": "tok_813cf85"
+      },
+      {
+        "kind": "app",
+        "name": "Google Chrome"
+      },
+      {
+        "kind": "app",
+        "name": "tok_d48d390"
+      },
+      {
+        "kind": "app",
+        "name": "Hammerspoon"
+      },
+      {
+        "kind": "app",
+        "name": "tok_557b4b2"
+      },
+      {
+        "kind": "app",
+        "name": "tok_8c74c26 tok_dd6d38d"
+      },
+      {
+        "kind": "app",
+        "name": "tok_8c74c26 tok_5b122f8"
+      },
+      {
+        "kind": "app",
+        "name": "tok_c4bd788 tok_76dca6d"
+      },
+      {
+        "kind": "app",
+        "name": "tok_51059fe-tok_dfcd300"
+      },
+      {
+        "kind": "app",
+        "name": "tok_51059fe-tok_5bfcde9"
+      },
+      {
+        "kind": "app",
+        "name": "tok_6e4988b"
+      },
+      {
+        "kind": "app",
+        "name": "tok_2023b9d tok_9ed7f94"
+      },
+      {
+        "kind": "app",
+        "name": "Mail"
+      },
+      {
+        "kind": "app",
+        "name": "tok_e3ffd9a"
+      },
+      {
+        "kind": "app",
+        "name": "Messages"
+      },
+      {
+        "kind": "app",
+        "name": "tok_9deeb67 tok_e3048c3"
+      },
+      {
+        "kind": "app",
+        "name": "tok_c78ef64"
+      },
+      {
+        "kind": "app",
+        "name": "tok_d282c45 tok_e8ad6fa"
+      },
+      {
+        "kind": "app",
+        "name": "tok_c8fac78"
+      },
+      {
+        "kind": "app",
+        "name": "tok_92851aa"
+      },
+      {
+        "kind": "app",
+        "name": "tok_f42e450"
+      },
+      {
+        "kind": "app",
+        "name": "Notes"
+      },
+      {
+        "kind": "app",
+        "name": "tok_92d31fd"
+      },
+      {
+        "kind": "app",
+        "name": "Obsidian"
+      },
+      {
+        "kind": "app",
+        "name": "tok_cdfb853"
+      },
+      {
+        "kind": "app",
+        "name": "tok_0adb82d"
+      },
+      {
+        "kind": "app",
+        "name": "tok_8b5aacf tok_47a3e13"
+      },
+      {
+        "kind": "app",
+        "name": "tok_cb11d74"
+      },
+      {
+        "kind": "app",
+        "name": "tok_aeb39c4"
+      },
+      {
+        "kind": "app",
+        "name": "tok_d94918b"
+      },
+      {
+        "kind": "app",
+        "name": "tok_4b591dc tok_bd9f5c0"
+      },
+      {
+        "kind": "app",
+        "name": "tok_cb28fd1 tok_93794dc"
+      },
+      {
+        "kind": "app",
+        "name": "tok_01d2e40"
+      },
+      {
+        "kind": "app",
+        "name": "tok_3e4c99d"
+      },
+      {
+        "kind": "app",
+        "name": "tok_49791e6 tok_0883af3 tok_5041f99"
+      },
+      {
+        "kind": "app",
+        "name": "Safari"
+      },
+      {
+        "kind": "app",
+        "name": "tok_468b405 tok_4d8f747"
+      },
+      {
+        "kind": "app",
+        "name": "tok_372bfb5"
+      },
+      {
+        "kind": "app",
+        "name": "tok_fdbc69e tok_7b07504"
+      },
+      {
+        "kind": "app",
+        "name": "tok_5522f34"
+      },
+      {
+        "kind": "app",
+        "name": "tok_4faf07c"
+      },
+      {
+        "kind": "app",
+        "name": "Spotify"
+      },
+      {
+        "kind": "app",
+        "name": "tok_d16814f"
+      },
+      {
+        "kind": "app",
+        "name": "tok_b665fe6"
+      },
+      {
+        "kind": "app",
+        "name": "tok_47f8c1e"
+      },
+      {
+        "kind": "app",
+        "name": "System tok_88589d1"
+      },
+      {
+        "kind": "app",
+        "name": "System Settings"
+      },
+      {
+        "kind": "app",
+        "name": "tok_4a01ccb"
+      },
+      {
+        "kind": "app",
+        "name": "Terminal"
+      },
+      {
+        "kind": "app",
+        "name": "tok_7236dee"
+      },
+      {
+        "kind": "app",
+        "name": "tok_f9a3a48 tok_ec47a7a"
+      },
+      {
+        "kind": "app",
+        "name": "tok_fa4159f"
+      },
+      {
+        "kind": "app",
+        "name": "tok_62bc0f8"
+      },
+      {
+        "kind": "app",
+        "name": "tok_0f523d0"
+      },
+      {
+        "kind": "app",
+        "name": "tok_ec0b64f tok_164e663"
+      },
+      {
+        "kind": "app",
+        "name": "tok_2b6d7c7"
+      },
+      {
+        "kind": "app",
+        "name": "WezTerm"
+      },
+      {
+        "kind": "app",
+        "name": "tok_87e3e52-26.6.0"
+      },
+      {
+        "kind": "app",
+        "name": "tok_4a99c60 tok_2ee646b"
+      },
+      {
+        "kind": "app",
+        "name": "tok_6efd2e7"
+      },
+      {
+        "kind": "app",
+        "name": "tok_39b37a4 tok_4191a92"
+      },
+      {
+        "kind": "session",
+        "name": "0"
+      },
+      {
+        "kind": "session",
+        "name": "config"
+      },
+      {
+        "kind": "session",
+        "name": "tok_9c21d48-tok_4957fbe"
+      },
+      {
+        "kind": "session",
+        "name": "tok_9c21d48-tok_9c20065"
+      },
+      {
+        "kind": "session",
+        "name": "tok_7968b17"
+      },
+      {
+        "kind": "session",
+        "name": "tok_43042a3"
+      },
+      {
+        "app": "Google Chrome",
+        "kind": "tab",
+        "tabIndex": 8,
+        "title": "2000$ tok_7fc812b tok_e769c66?... tok_2ada8ce tok_69c10a5 tok_c39f3d0 tok_4c89c59 tok_4e87494 tok_c39f3d0 tok_4c2b4c0??? - tok_525dcea",
+        "winId": 2132621093
+      },
+      {
+        "app": "Google Chrome",
+        "kind": "tab",
+        "tabIndex": 7,
+        "title": "tok_8fba8b7 tok_dbb8462 tok_a1128df",
+        "winId": 2132621093
+      },
+      {
+        "app": "Google Chrome",
+        "kind": "tab",
+        "tabIndex": 2,
+        "title": "tok_cfe2371 · tok_d77741d/tok_43042a3",
+        "winId": 2132621093
+      },
+      {
+        "app": "Google Chrome",
+        "kind": "tab",
+        "tabIndex": 10,
+        "title": "tok_250ce5b tok_df7c2b4...tok_0ce6c62 · tok_d77741d/tok_43042a3",
+        "winId": 2132621093
+      },
+      {
+        "app": "Google Chrome",
+        "kind": "tab",
+        "tabIndex": 4,
+        "title": "tok_190935e tok_f43a4fc tok_bdeca59 tok_4d78792 tok_c39f3d0 tok_52422a7 tok_2ad97d0! : tok_9c1f999/tok_52422a7",
+        "winId": 2132621093
+      },
+      {
+        "app": "Google Chrome",
+        "kind": "tab",
+        "tabIndex": 3,
+        "title": "tok_ba37318 tok_97b5f85 tok_4e866fc tok_954fdd5 tok_75a756d - tok_525dcea",
+        "winId": 2132621093
+      },
+      {
+        "app": "Google Chrome",
+        "kind": "tab",
+        "tabIndex": 5,
+        "title": "tok_ba37318 tok_97b5f85 tok_4e866fc tok_2c08b15 code tok_4e3de00 tok_709d896 tok_4c92044 tok_19440e8 - tok_525dcea",
+        "winId": 2132621093
+      },
+      {
+        "app": "Google Chrome",
+        "kind": "tab",
+        "tabIndex": 6,
+        "title": "tok_1b2e4c6 tok_58fca09 @tok_bc6daf1 #tok_ccdfb7e #tok_ce50cf4 - tok_525dcea",
+        "winId": 2132621093
+      },
+      {
+        "app": "Google Chrome",
+        "kind": "tab",
+        "tabIndex": 9,
+        "title": "tok_9014118 tok_6a0dedf light tok_9d08bde tok_4e866fc 2002 tok_a5d9afe tok_eb9aeeb - tok_1317883",
+        "winId": 2132621093
+      },
+      {
+        "app": "Google Chrome",
+        "kind": "tab",
+        "tabIndex": 1,
+        "title": "tok_e1fabda tok_c9a8b39 tok_4c92710 tok_d77741d · tok_71fc162 tok_b2fb7c6 #8 · tok_d77741d/tok_43042a3",
+        "winId": 2132621093
+      },
+      {
+        "app": "tok_3780ee1 tok_2c89e37",
+        "kind": "window",
+        "title": "tok_40f8925 - tok_3780ee1 tok_2c89e37"
+      },
+      {
+        "app": "Google Chrome",
+        "kind": "window",
+        "title": "2000$ tok_7fc812b tok_e769c66?... tok_2ada8ce tok_69c10a5 tok_c39f3d0 tok_4c89c59 tok_4e87494 tok_c39f3d0 tok_4c2b4c0??? - tok_525dcea - tok_dc4b7d1 tok_cafa46a tok_c969bd4 - 906 tok_4e3f482 - Google Chrome"
+      },
+      {
+        "app": "Messages",
+        "kind": "window",
+        "title": "+1 (510) 944-6772"
+      },
+      {
+        "app": "tok_c4419b0 tok_0939ed4",
+        "kind": "window",
+        "title": "tok_c4419b0 tok_6b09aff tok_6d90a74 tok_06aca19"
+      },
+      {
+        "app": "tok_06aca19",
+        "kind": "window",
+        "title": "tok_39b37a4 15 tok_9ed7f94 tok_f556cf5 – tok_a3e26c2 17.5"
+      },
+      {
+        "app": "Spotify",
+        "kind": "window",
+        "title": "Spotify tok_31d9312"
+      },
+      {
+        "app": "tok_7236dee",
+        "kind": "window",
+        "title": "tok_54b2e9c"
+      },
+      {
+        "app": "WezTerm",
+        "kind": "window",
+        "title": "tok_43042a3"
+      }
+    ]
   },
   "theme": {
-    "accent": "#66d9ef",
-    "active": "#f92672",
-    "base00": "#1f1d20",
-    "base01": "#3e3c3e",
-    "base02": "#5d5c5c",
-    "base03": "#878787",
-    "base04": "#9b9a98",
-    "base05": "#bab9b6",
-    "base06": "#d9d9d4",
-    "base07": "#f8f8f2",
-    "base08": "#fa4c8b",
-    "base09": "#fa564c",
-    "base0A": "#fa9f4c",
-    "base0B": "#8bfa4c",
-    "base0C": "#4cfaad",
-    "base0D": "#4ce2fa",
-    "base0E": "#824cfa",
-    "base0F": "#fa4c5f",
-    "bg": "#1f1d20",
-    "fg": "#f8f8f2",
+    "accent": "#e571c4",
+    "active": "#a143f4",
+    "base00": "#17121c",
+    "base01": "#36313b",
+    "base02": "#555159",
+    "base03": "#776388",
+    "base04": "#938f96",
+    "base05": "#b2aeb5",
+    "base06": "#d1ced3",
+    "base07": "#f0edf2",
+    "base08": "#a852f5",
+    "base09": "#ec52f5",
+    "base0A": "#f552b9",
+    "base0B": "#f5a852",
+    "base0C": "#acf552",
+    "base0D": "#52f557",
+    "base0E": "#52d5f5",
+    "base0F": "#d152f5",
+    "bg": "#17121c",
+    "fg": "#f0edf2",
     "mode": "dark",
-    "name": "dark",
-    "subtle": "#878787"
+    "name": "tok_ca7ae63",
+    "subtle": "#776388"
   },
-  "wire": {
-    "tense": "tok_5984c2b"
+  "time": {
+    "menu": {
+      "max": 1526,
+      "med": 32,
+      "n": 15
+    },
+    "place session": {
+      "max": 2605,
+      "med": 53,
+      "n": 23
+    },
+    "place window": {
+      "max": 90,
+      "med": 58,
+      "n": 2
+    }
+  },
+  "tmuxconf": "tok_a2a595b=\"$tok_557b4b2/.config/tmux\"\ntok_35d3d71=\"$tok_557b4b2/.config/tok_35d3d71/target/release/tok_35d3d71\"   # tok_c39f3d0 tok_35d3d71 tok_e4e0a45, tok_6e655fb tok_6809f80 (tok_d907534 tok_c39f3d0 tok_485f81e-tok_818765d tok_504089f)\n\n### tok_c7ed593\n\n# tok_764870e (tok_6ed04e9 shared tok_fe2ce26)\ntok_485f81e-tok_818765d 'tok_2ca26aa tok_a52c63b=\"=\" tok_d5ca1b1 -tok_9c1f999 tok_4c08f18 tok_61d41e0; tok_4cf34c0 \\\n  tok_0848d95 \"$tok_4c08f18\" tok_4d78792 \"#\"*|\"\") tok_29f70d0 ;; tok_8f933b5; \\\n  tmux tok_d905bb7 -tok_9c219e2 \"@tok_95fcef1${tok_4c08f18}\" \"${tok_61d41e0}\"; \\\ntok_a41f8bd < ~/.config/tok_fe2ce26/tok_95ffe85; \\\ntmux tok_d905bb7 -tok_9c219e2 \"@tok_d57e7ff\" \"$(tmux tok_0e60d78 -tok_4d1767c @tok_1aa40aa)\"; \\\ntmux tok_d905bb7 -tok_9c219e2 \"@tok_d4d9403\" \"$(tmux tok_0e60d78 -tok_4d1767c @tok_30cbd63)\"'\n\n# tok_a94f573 tok_1b58bfe\ntok_d905bb7 -tok_9c219e2 tok_a94f573 tok_4e866fc\ntok_d905bb7 -tok_9c219e2 tok_a94f573-tok_68e4136 bottom\ntok_d905bb7 -tok_9c219e2 tok_a94f573-tok_b812cd2 \"bg=#{@tok_1aa40aa},fg=#{@tok_1b69936}\"\n\n# tok_29c84d7 tok_b8fe918\ntok_d905bb7 -tok_9c219e2 tok_29c84d7-tok_5dff6fb-tok_c44f5c8 tok_d38c804\ntok_d905bb7 -tok_9c219e2 tok_29c84d7-tok_5dff6fb-tok_b812cd2 \"fg=#{@tok_4756b64}\"\ntok_d905bb7 -tok_9c219e2 tok_29c84d7-active-tok_5dff6fb-tok_b812cd2 \"fg=#{@tok_b65fd6b}\"\n\n# windows \ntok_d905bb7 -tok_9c219e2 window-tok_a94f573-tok_b812cd2 \"bg=#{@tok_1aa40aa},fg=#{@tok_4756b64}\"\ntok_d905bb7 -tok_9c219e2 window-tok_a94f573-tok_a75c4ee \" #[fg=#{@tok_4756b64}]#tok_9c21d48 #tok_9c1feb2 \"\n\ntok_d905bb7 -tok_9c219e2 window-tok_a94f573-tok_90afd2e-tok_b812cd2 \"bg=#{@tok_d57e7ff},fg=#{@tok_d4d9403},tok_022fe1a\"\ntok_d905bb7 -tok_9c219e2 window-tok_a94f573-tok_90afd2e-tok_a75c4ee \" #[fg=#{@tok_d4d9403},tok_022fe1a]#tok_9c21d48 #tok_9c1feb2* \"\n\n# tok_728c1d0 tok_1efd300: tok_9c20fb0 tok_b883fb1 tok_675b72c tok_75e7ad8 tok_e144445/tok_f4abeea/tok_d4329c4/tok_69fa488 tok_3e2a1ba tok_c4bee0c @tok_37d8110 tok_4a028b0 tok_9c20fb0\n# tok_9ed7562-tok_fa8d360 tok_e5f7f6b; tok_c39f3d0 tok_1b58bfe tok_466dca6 tok_c39f3d0 tok_fc7a560 (tok_b8d6d3d tok_3353c2f, tok_b8d6d3d tok_0fa6f3a).\ntok_485f81e-tok_818765d \"$tok_a2a595b/tok_27304b7/tok_37d8110.tok_497a64a\"\n\n# tok_a94f573 left / right\ntok_d905bb7 -tok_9c219e2 tok_a94f573-left \"#[bg=#{@tok_d57e7ff},fg=#{@tok_d4d9403},tok_022fe1a] #tok_9c1f7e6 #[tok_42f0ee2]\"\n\n# tok_4ec1b26 #() tok_654bae7: tok_fdcdf8e tok_37fa9d4 tok_391bd59 tok_61d16c7, tok_4979dcb tok_c39f3d0 tok_1b58bfe tok_c578c1f tok_103b1bf tok_8994b53 (tok_9c20fb0 #() tok_fa52137 tok_9c20fb0 tok_818765d\n# tok_a2b03f0 tok_e1fabda tok_496f690 tok_a94f573-tok_f78627c; tok_6855838 tok_2ada8ce tok_c0eab35 tok_190d02a tok_496f690 tok_553995e, tok_176a4a4).\ntok_d905bb7 -tok_9c219e2 tok_a94f573-right \"#[fg=#{@tok_4756b64}]#{tok_9c1f7e6|$tok_557b4b2|~|:tok_5dfe0cd}  #{@tok_37d8110}#[tok_42f0ee2]\"\n\ntok_d905bb7 -tok_9c219e2 tok_a94f573-tok_f78627c 2\n\ntok_d905bb7 -tok_9c219e2 tok_a94f573-left-tok_2333309 30\ntok_d905bb7 -tok_9c219e2 tok_a94f573-right-tok_2333309 150\n\n# tok_504c925 tok_bdeca59\ntok_d905bb7 -tok_9c219e2 tok_2167f56-tok_264d4e5 tok_4e866fc\ntok_d905bb7 -tok_9c219e2 tok_d905bb7-tok_482f9aa tok_4e866fc\ntok_d905bb7 -tok_9c219e2 tok_d905bb7-tok_482f9aa-tok_05cf1cc \"#tok_9c1f7e6\"\n\n\n### tok_df7c2b4 config\n\ntok_d905bb7 -tok_4c0c859 tok_504c925-tok_4e74d16 ',tok_497ad16*:tok_497b22f@'\ntok_d905bb7-tok_fc7a560 -tok_4979a65 tok_504c925-tok_3dd7e4e ',tok_0c094a3:tok_4b9e368'\n\ntok_d905bb7 -tok_9c219e2 tok_e5fa568 tok_4e866fc\ntok_c4be740 -tok_9c219e2 mode-tok_333b2d1 tok_4a61464\n\n# tok_b0ac6f8 code tok_9bbf817\ntok_08d942a -T tok_b0ac6f8-mode-tok_4a61464 tok_9c20065 tok_c68e723 -tok_9c203cb tok_aa153ba-tok_e66fe89\ntok_08d942a -T tok_b0ac6f8-mode-tok_4a61464 tok_9c20218 tok_c68e723-tok_333b2d1 -tok_9c203cb tok_b0ac6f8-tok_94b42ad-tok_3e2a1ba-tok_d0b1d0f \"tok_621f44a\"\ntok_08d942a tok_9c1f633 tok_1bd819c-tok_d57fae7\ntok_08d942a -T tok_b0ac6f8-mode-tok_4a61464 tok_ae1fd2c tok_c68e723-tok_333b2d1 -tok_9c203cb tok_b0ac6f8-tok_94b42ad-tok_3e2a1ba-tok_d0b1d0f \"tok_621f44a\"\n\n# tok_7d925f0 tok_06349e0: tok_ded6ee7 tok_411ee0b tok_4c0c859 tok_9c22414-tok_9c1fb4c/tok_9c22414-tok_9c2182f (tok_c4784b2/tok_28ef596.tok_2e83e15) — tok_6340b4b'tok_9c1f7e6 tok_6d36e9b tok_e5fa568, tok_f2f4774 tok_4c0f63a\n# tok_3dc45e0-tok_468b405 tok_08d3766'tok_9c1f7e6 tok_287de92 tok_49de6f4/tok_a5b1d61 (tok_1317883 Code, tok_30382b4), tok_f2f4774 tok_c39f3d0 tok_29c84d7'tok_9c1f7e6 tok_2f88f3b tok_634047f tok_b0ac6f8-mode.\ntok_08d942a -tok_9c2292d tok_e9c5c53   tok_4d7952a -tok_9c21b95 '#{tok_9c22414:*tok_6340b4b*,#{tok_b8311a7}}' { tok_c68e723 -tok_9c22414 } { tok_4d7952a -tok_9c21b95 '#{tok_997a243}' { tok_c68e723-tok_333b2d1 tok_41da508 } { tok_b0ac6f8-mode -tok_9c2167c ; tok_c68e723 -tok_9c22414 } }\ntok_08d942a -tok_9c2292d tok_f47a092 tok_4d7952a -tok_9c21b95 '#{tok_9c22414:*tok_6340b4b*,#{tok_b8311a7}}' { tok_c68e723 -tok_9c22414 } { tok_4d7952a -tok_9c21b95 '#{tok_997a243}' { tok_c68e723-tok_333b2d1 tok_d5f1a1e } { tok_c68e723 -tok_9c22414 } }\n\ntok_08d942a tok_9c1f7e6 tok_9a57744-tok_5698909 -tok_497be14 -tok_9c2277a name\n\n\n### session tok_dbcfe75\ntok_9373ba5-tok_4c08f18 tok_9c21d48\ntok_9373ba5-tok_4c08f18 tok_9c2277a\n\n# -tok_9c214c9: tok_c1683aa'tok_9c1fcff tok_555acbc tok_c39f3d0 tok_e1fabda'tok_9c1f7e6 tok_3cf967e tok_55e431c tok_2ca26aa `tok_35d3d71 tok_6a92e4b` tok_fa52137 — tok_4d7acf4'tok_9c1f7e6 tok_d041795-tok_3e2a1ba-tok_dc9b710.\ntok_08d942a-tok_4c08f18 tok_9c2277a tok_485f81e-tok_818765d -tok_9c214c9 \"$tok_35d3d71 tok_6a92e4b tok_2651191 tok_4c08f18 tok_4c0ca0c=tmux tok_ff745b0=tok_9c2277a\"\ntok_08d942a-tok_4c08f18 tok_9c21d48 tok_485f81e-tok_818765d -tok_9c214c9 \"$tok_35d3d71 tok_6a92e4b tok_2651191 tok_4c08f18 tok_4c0ca0c=tmux tok_ff745b0=tok_9c21d48\"\ntok_d905bb7-tok_55dd6c6 -tok_9c219e2 tok_e1fabda-session-tok_4f9404f 'tok_485f81e-tok_818765d -tok_9c214c9 \"$tok_35d3d71 tok_6a92e4b tok_6809f80 tok_12f72af=session name=#{tok_d3554ff}\"'\ntok_d905bb7-tok_55dd6c6 -tok_9c219e2 tok_56504d5-tok_454ed89-tok_29c84d7 'tok_485f81e-tok_818765d -tok_9c214c9 \"$tok_35d3d71 tok_6a92e4b tok_6340b4b active=#{?#{tok_9c22414:*tok_6340b4b*,#{tok_b8311a7}},1,0}\"'\n###\n\n\n\n# tok_c2186b0\ntok_d905bb7 -tok_9c219e2 @tok_eefca43 ' \\\n\ttmux-tok_2ecc9ff/tok_c2186b0 \\\n\ttmux-tok_2ecc9ff/tmux-tok_294d85e \\\n\ttmux-tok_2ecc9ff/tmux-tok_cb17cf4 \\\n\ttok_844a4c3/tok_6340b4b-tmux-tok_8e7a92a \\\n\ttok_7fdfc37/tmux-tok_6ba0601 \\\n'\n\n# tok_b3d8023 sessions tok_4c92710 name\ntok_d905bb7 -tok_9c219e2 @tok_cb17cf4-tok_a5550b6 '~tok_6340b4b -> tok_6340b4b'\n\n# tok_0cb3c77 tmux tok_56078f6 tok_619a100 (tok_3550d64 tok_69c10a5 tok_e5f7f6b tok_4c0ca0c tok_c39f3d0 tok_1df52bd bottom tok_4e87494 tmux.tok_b27abab)\ntok_485f81e '~/.tmux/tok_2ecc9ff/tok_c2186b0/tok_c2186b0'\n\n# tok_6cfd3bf ⌃tok_6cf259c tok_5e02b0f: tok_f0458ab tok_6340b4b-tmux-tok_8e7a92a'tok_9c1f7e6 tok_6d36e9b ⌃tok_6cf259c tmux tok_093133b (tok_d905bb7 tok_4c92710 tok_c2186b0 tok_e35d796),\n# tok_4979dcb tok_4c0ca0c tok_9c20fb0 tok_77c3861 tok_818765d ⌃h tok_4d7ab41 tok_f7e8a48 / ⌃l tok_efdd78f — tok_4ec1b26 tok_d4f4f56 tok_a308efb.\ntok_9373ba5 -tok_9c2292d tok_9c21316-h ; tok_9373ba5 -tok_9c2292d tok_9c21316-j ; tok_9373ba5 -tok_9c2292d tok_9c21316-k ; tok_9373ba5 -tok_9c2292d tok_9c21316-l\n\n# ── tok_35d3d71 tok_28a044b tok_28ef596 ───────────────────────────────────────────────────────────────────\n# tok_6cf259c tok_fb913c6 / tok_e46856d / tok_ef0a162 / tok_22c8117 / tok_06349e0 tok_391bd59 all tok_dad391e tok_6ed04e9 tok_6e655fb tok_be2df8b (tok_c4784b2/\n# tok_28ef596.tok_2e83e15) tok_3d19227 tok_69c10a5 tok_d3956b7, tok_4979dcb tok_c39f3d0 tok_0ec52cb tok_4d9e118 tok_f3751f1 tok_3e2a1ba tok_c39f3d0 tok_4c08f18 tmux tok_093133b tok_391bd59 tok_c39f3d0 tok_ded6ee7 tok_6ae7adb,\n# tok_b8d6d3d tok_431062c-tok_52e4c8f. `tok_4cbae3f` (tok_4d78792 tok_6855838 tok_be2df8b) tok_4d7ab41 tok_c39f3d0 tok_6340b4b/tok_5f02428/tok_454ed89 tok_d77a6c5 tok_d2ffcc0 tok_ebb51d4 tok_4a028b0 tok_d907534 tok_654bae7.\n# -tok_9c1f480: tok_f90eead tok_6b30cbc tok_4d7952a tok_35d3d71 tok_48597eb'tok_9c1fcff tok_d9533fc tok_4d7acf4 tok_d40ae49 (tok_db4aea5 tok_01ee249).  ⌥ tok_d326c56 ⌃, tok_4979dcb tok_4ec1b26 tok_818765d/tok_147b32b tok_8dd3da6.\ntok_7b0ff4c-tok_d3956b7 -tok_9c1f480 ~/.config/tmux/tok_35d3d71-tok_28ef596.tok_b27abab\n\n# ⌃⏎ tok_6096be6: WezTerm tok_6410cf0 tok_a8a58d0+tok_2c9f771 tok_4c0c859 tok_c39f3d0 tok_e123e02-tok_9c1fb4c tok_bca419c \\tok_9c2167c[13;tok_557859b; tok_f557a8d tok_4d7acf4 tok_4a028b0 tok_9c20fb0 tok_ebb333e\n# tok_4c08f18 tok_3e2a1ba tok_6096be6 tok_c39f3d0 tok_29c84d7. (tok_f555a44 apps tok_391bd59 tok_fbce715 tok_4c92710 tok_4d9e118'tok_9c1f7e6 ⌃⏎ tok_1356f55.)\ntok_d905bb7 -tok_9c1f7e6 tok_ebb333e-tok_333b2d1[0] \"\\tok_9c2167c[13;tok_557859b\"\ntok_08d942a -tok_9c2292d tok_817c0ca tok_e46856d-tok_29c84d7 -tok_9c20731\n",
+  "vim": {
+    "active": "0"
   }
 }

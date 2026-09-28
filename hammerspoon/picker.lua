@@ -121,11 +121,12 @@ function setMode(m){
 function flash(t){ hint.textContent=t; clearTimeout(flashT); flashT=setTimeout(()=>hint.textContent=HINT, 1200); }
 
 // ── the two entry points HS calls: load() draws the list now, icons() fills them in ──
-function load(choices, favable){
-  CH = choices; FAVABLE = !!favable; sel = 0;   // ICONS is NOT reset — it persists across opens
+function load(choices, favable, keep){
+  CH = choices; FAVABLE = !!favable;            // ICONS is NOT reset — it persists across opens
   HINT = FAVABLE ? '↵ open · esc back · 1-9 favourite' : '↵ open · esc back · j/k move';
   hint.textContent = HINT;
-  q.value=''; setMode('insert'); filter(''); q.focus();
+  if(keep){ filter(q.value); return; }          // the index refreshed under the user: keep the query
+  sel = 0; q.value=''; setMode('insert'); filter(''); q.focus();
 }
 function seedIcons(map){ Object.assign(ICONS, map); render(); }
 function setTheme(t){ const r=document.documentElement.style; for(const k in t) r.setProperty('--'+k, t[k]); }
@@ -199,7 +200,23 @@ local function build()
   wv:html(html)   -- loaded ONCE; opens after this just inject data
 end
 
-function M.build() if not wv then build() end end   -- pre-create at boot so the first open is warm
+function M.build() if not wv then build() end end
+
+-- a `menu` with choices: show it, say it's up, say how it ended. `decorate` adds icons.
+local last_raw = {}
+function M.last_raw() return last_raw end   -- the last pick's raw choices (the time suite replays one)
+function M.start(town, decorate)
+  town.listen("menu", function(w)
+    if w.tense ~= "future" or not w.body.choices then return end
+    last_raw = w.body.choices
+    local prevWin = hs.window.focusedWindow()
+    M.show({ placeholder = "go", choices = decorate(last_raw),
+      onSelect    = function(c) town.talk("menu", { id = c.id }, "past") end,
+      onFavourite = function(c, slot) town.talk("menu", { id = c.id, slot = slot }, "past") end,
+      onCancel    = function() town.talk("menu", {}, "past"); if prevWin then prevWin:focus() end end })
+    town.talk("menu", { n = #last_raw })   -- the fact: it's up
+  end)
+end   -- pre-create at boot so the first open is warm
 
 -- recolour the live webview when the palette changes (Caps t): just re-set the CSS vars —
 -- no rebuild, no lost icons or state. Works while hidden too (ready for the next open).
@@ -229,7 +246,7 @@ end
 
 -- push a list into the webview: seed any icons it hasn't seen, then draw. All async JS, so
 -- it never blocks the main thread — this IS the whole cost of a repeat wake.
-local function push(opts)
+local function push(opts, keep)
   local rows, newmap, anyNew = {}, {}, false
   for i, c in ipairs(opts.choices or {}) do
     rows[i] = { text = c.text, _i = i, ik = c.iconKey, uses = c.uses or 0 }
@@ -237,7 +254,7 @@ local function push(opts)
     if url then newmap[c.iconKey] = url; anyNew = true end
   end
   if anyNew then wv:evaluateJavaScript("seedIcons(" .. hs.json.encode(newmap) .. ")", function() end) end
-  wv:evaluateJavaScript("load(" .. hs.json.encode(rows) .. ", " .. tostring(opts.onFavourite ~= nil) .. ")", function() end)
+  wv:evaluateJavaScript("load(" .. hs.json.encode(rows) .. ", " .. tostring(opts.onFavourite ~= nil) .. ", " .. tostring(keep == true) .. ")", function() end)
 end
 
 -- grab the keyboard for the webview: the ONE window-server fight. Async so it never blocks,
@@ -265,9 +282,9 @@ end
 -- wake onto `opts`. ASLEEP → the window dance, exactly once (place · push · show · grab key).
 -- AWAKE → just push the new list; nothing touches the window server. This split is the fix.
 local function wake(opts)
-  newEpoch()
   current = opts
-  if awake then push(opts); return end             -- already up — a pure content delta, done
+  if awake then push(opts, true); return end       -- already up: a content delta under the user, and
+  newEpoch()                                       -- NOT a new epoch — that would void the key grab
 
   local scr = hs.mouse.getCurrentScreen() or hs.screen.mainScreen()  -- mouse screen: no AX
   local f   = scr:frame()
@@ -301,6 +318,12 @@ function M.prewarm(items)
     if i < #items then warmTimer = hs.timer.doAfter(0.03, chunk) end
   end
   chunk()
+end
+
+function M.stop()   -- teardown on reload: the timers, and the one webview
+  if grabTimer then grabTimer:stop(); grabTimer = nil end
+  if warmTimer then warmTimer:stop(); warmTimer = nil end
+  if wv then pcall(function() wv:delete() end); wv = nil end
 end
 
 return M

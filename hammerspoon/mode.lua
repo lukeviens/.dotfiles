@@ -13,12 +13,13 @@ local register = "point"             -- what hjkl grabs: point (cursor) | edge (
 -- register's own (see ladder.plan); DMAX = the mac window. DMAX is recomputed on every Caps tap
 -- (below): 2 rungs in the terminal, else 1 — same shape it's always been outside a terminal pane.
 local depth, DMAX = 0, 1
-local townhint                       -- the key menu, from town's keys.lua
+local keys = require("keys")         -- the keymap as town wrote it (~/.cache/town/keys)
 local townmodetap                    -- the exclusive-mode eventtap (held; M.stop roots it from GC)
 
 -- the on-screen chrome (the corner badge + the `?` reference card) lives in hud.lua; mode hands
 -- it the current register/depth and the hint items, and it renders.
 local hud = require("hud")
+local time = require("time")         -- the ? card's second page: town's pace as a table
 local chrome = require("chrome")   -- Chrome's own depth-0 rung: cycling its tabs (see ladder.plan)
 local ladder = require("ladder")   -- the one decision: register+depth+surface → what hjkl does
 local menunav = require("menunav")   -- drives an open mac menu (leader m) purely via AX, no keys
@@ -30,11 +31,8 @@ end
 
 -- windows: the window module (glide + resize). warm: places.list_windows (cache warm-up).
 function M.start(town, windows, warm)
-  -- the leader hint is town's: keys.lua decides both what the keys do and what they say.
-  town.listen("hints", function(w) townhint = w.body.items; if hud.cardShown() then hud.showCard(townhint) end end)
-  -- a picker taking the keyboard yields the mode. Its OWN show listener — the bus fans `show` out
-  -- to both this and the picker glue independently, so no forward-declared leaveMode is needed.
-  town.listen("show", function() M.leave() end)
+  -- a menu taking the keyboard yields the mode
+  town.listen("menu", function(w) if w.tense == "future" and w.body.choices then M.leave() end end)
 
   -- Caps m opens the mac menu bar via AX (menunav — no synthetic keys, this system UI layer
   -- ignores those). LOCAL, not town-routed: a town round-trip is just async enough that hjkl
@@ -55,7 +53,6 @@ function M.start(town, windows, warm)
   function leader:entered()
     modeOn = true
     hs.timer.doAfter(0, warm)   -- warm the window cache while you decide
-    if not townhint then town.talk("hint", { at = "leader" }, "future") end
     hud.badge("point", locate(depth))
     hud.showBadge()
   end
@@ -169,8 +166,9 @@ function M.start(town, windows, warm)
   leader:bind({ "shift" }, "t", function() onKey("T") end)   -- ⇧T → random theme
   leader:bind({ "shift" }, "/", function()   -- ? toggles the derived key card
     usedHold = true
-    if hud.cardShown() then hud.hideCard()
-    else town.talk("hint", { at = "leader" }, "future"); hud.showCard(townhint) end   -- pull fresh, re-render on arrival
+    if hud.cardShown("time") then hud.hideCard()
+    elseif hud.cardShown("keys") then hud.showTable(time.card())                       -- second page: the pace
+    else hud.showCard(keys.hints("leader")) end   -- read on the press: town may have rewritten it
   end)
   leader:bind({}, "escape", function()
     if inMenu then menunav.cancel(); inMenu = false; hud.badge(register, locate(depth))
@@ -225,6 +223,7 @@ function M.start(town, windows, warm)
 end
 
 function M.stop()   -- teardown + GC anchor (its upvalues keep the eventtap + badge + modal reachable)
+  if modeOn then leader:exit() end
   if townmodetap then townmodetap:stop() end
   hud.stop()
 end

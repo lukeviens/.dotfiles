@@ -16,7 +16,7 @@ local APP_DIRS = {
 }
 local app_cache
 function M.list_apps(fresh)
-  if fresh then app_cache = nil end          -- force a cold rebuild (the perf suite uses this)
+  if fresh then app_cache = nil end          -- force a cold rebuild (the time suite uses this)
   if app_cache then return app_cache end
   local seen, out = {}, {}
   for _, dir in ipairs(APP_DIRS) do
@@ -44,8 +44,9 @@ end
 local iconfb = {}   -- name → { image|false, key }: the AX/bundle icon lookup runs once per app, ever
 local win_cache
 local winfilter
+local refreshTimer   -- the debounced index refresh
 function M.list_windows(fresh)
-  if fresh then win_cache = nil end          -- force a cold rebuild (the perf suite uses this)
+  if fresh then win_cache = nil end          -- force a cold rebuild (the time suite uses this)
   if win_cache then return win_cache end
   local out = {}
   -- the filter keeps the visible standard windows current from events, so this list is ~0.4ms;
@@ -156,25 +157,39 @@ function M.start(bus)
   winfilter:subscribe({ hs.window.filter.windowCreated, hs.window.filter.windowDestroyed },
     function() win_cache = nil end)
 
-  -- town owns the pickers; the surface gathers the live app/window/session lists on request.
-  town.listen("gather", function(w)
-    local what = w.body.what
-    if what == "apps" then town.talk("apps", { places = app_places() }, "past")
-    elseif what == "windows" then town.talk("windows", { places = window_places() }, "past")
-    elseif what == "sessions" then
-      session_places(function(s) town.talk("sessions", { places = s }, "past") end)
-    elseif what == "all" then                                      -- the universal picker's live half
-      local all = window_places()
-      for _, p in ipairs(app_places()) do all[#all + 1] = p end
-      session_places(function(s)                                   -- sessions arrive async, then talk
-        for _, p in ipairs(s) do all[#all + 1] = p end
-        chrome.tabs(function(t)
-          for _, p in ipairs(t) do all[#all + 1] = p end
-          town.talk("everything", { places = all }, "past")
+  -- town owns the menus; the surface says what exists when asked.
+  -- the index: every place that exists, said as one `places` fact. Refreshed when a menu is
+  -- wished for (the menu opens from the last index at once; this update lands under it) and,
+  -- debounced, when windows come or go — so the next wish finds it warm.
+  -- said only when it differs from the last one said: a Caps f that changed nothing writes nothing.
+  -- Sorted first, so focus order shuffling the window list doesn't count as a change (the menu
+  -- orders by town's own past anyway).
+  local lastSaid
+  local function refresh()
+    local all = window_places()
+    for _, p in ipairs(app_places()) do all[#all + 1] = p end
+    session_places(function(s)                                   -- sessions, then Chrome's tabs: both async
+      for _, p in ipairs(s) do all[#all + 1] = p end
+      chrome.tabs(function(t)
+        for _, p in ipairs(t) do all[#all + 1] = p end
+        table.sort(all, function(a, b)
+          local ka = (a.kind or "") .. ":" .. (a.app or a.name or "") .. ":" .. (a.title or "")
+          local kb = (b.kind or "") .. ":" .. (b.app or b.name or "") .. ":" .. (b.title or "")
+          return ka < kb
         end)
+        local said = hs.json.encode(all)
+        if said == lastSaid then return end
+        lastSaid = said
+        town.talk("places", { places = all })
       end)
-    end
+    end)
+  end
+  town.listen("menu", function(w) if w.tense == "future" and w.body.what then refresh() end end)
+  winfilter:subscribe({ hs.window.filter.windowCreated, hs.window.filter.windowDestroyed }, function()
+    if refreshTimer then refreshTimer:stop() end
+    refreshTimer = hs.timer.doAfter(0.3, refresh)
   end)
+  refreshTimer = hs.timer.doAfter(3, refresh)                    -- warm at boot
 
   -- HS owns mac focus: enter a window the town means to (a future place), best-effort.
   town.listen("place", function(w)
@@ -210,6 +225,7 @@ end
 
 function M.stop()   -- teardown + GC anchor (its upvalues keep winfilter + the pathwatchers alive)
   if winfilter then pcall(function() winfilter:unsubscribeAll() end) end
+  if refreshTimer then refreshTimer:stop() end
   for _, pw in ipairs(watchers or {}) do pcall(function() pw:stop() end) end
 end
 

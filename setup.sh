@@ -5,7 +5,7 @@ cd "$HOME/.config"
 
 # tools (karabiner asks for your password: it installs a driver)
 brew install rust tmux neovim zoxide k9s fzf ripgrep tree-sitter-cli
-brew install --cask wezterm hammerspoon karabiner-elements font-caskaydia-mono-nerd-font
+brew install --cask wezterm@nightly hammerspoon karabiner-elements font-caskaydia-mono-nerd-font
 
 # shell: ~/.zshrc sources zsh/.zshrc
 bash zsh/gen_.zshrc.sh

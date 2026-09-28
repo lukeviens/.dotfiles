@@ -45,7 +45,7 @@ fn snippet(s: &str, lo: usize, hi: usize) -> String {
 }
 
 // Hermetic sandbox: effects land in `EFFECTS`, io.popen/io.open reads serve canned `WORLD` text
-// (feed_popen/feed_file), time + RNG pinned so even the random-theme path snapshots.
+// (feed_file), time + RNG pinned so even the random-theme path snapshots.
 fn sandbox(lua: &Lua) {
     lua.load(
         r#"
@@ -220,7 +220,7 @@ pub fn replay(words: &[Value]) -> Value {
             past.borrow_mut().entry(kind.clone()).or_default().push(w["body"].clone());
         }
         for (kinds, talk) in &listeners {
-            if kinds.contains(&kind) {
+            if kinds.contains(&kind) || kinds.contains("*") {
                 let heard = lua.to_value(w).unwrap();
                 match talk.call::<LuaValue>(heard) {
                     Ok(said) if !said.is_nil() => {
@@ -246,14 +246,6 @@ pub fn replay(words: &[Value]) -> Value {
 pub fn effects(lua: &Lua) -> Vec<Value> {
     let e: LuaValue = lua.globals().get("EFFECTS").unwrap();
     lua.from_value(e).unwrap()
-}
-
-/// Feed canned output for an io.popen whose command CONTAINS `cmd_substr`.
-#[allow(dead_code)]
-pub fn feed_popen(lua: &Lua, cmd_substr: &str, text: &str) {
-    let world: Table = lua.globals().get("WORLD").unwrap();
-    let popen: Table = world.get("popen").unwrap();
-    popen.set(cmd_substr, text).unwrap();
 }
 
 /// Feed canned content for an io.open(path, "r") whose path CONTAINS `path_substr`.

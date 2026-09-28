@@ -15,7 +15,7 @@ use crate::word::Word;
 /// segments (readability only), public apps. Everything else is data → tokenized. Missing a word
 /// just tokenizes it, so this is safe to grow — but only add structural tokens, never a data-ish one.
 const SAFE: &[&str] = &[
-    // place kinds · pick targets · move dirs · arrange targets · key.at · theme names & modes
+    // place kinds · menu whats · move dirs · arrange targets · key.at · theme names & modes
     "window", "session", "app", "tab", "all", "apps", "windows", "sessions",
     "h", "j", "k", "l", "left", "right", "top", "bottom", "max", "fullscreen",
     "leader", "tmux", "next", "dark", "light", "sun", "black", "random",
@@ -131,7 +131,7 @@ mod tests {
         Scrubber::new([7u8; 16])
     }
     fn word(kind: &str, body: Value) -> Word {
-        Word { kind: kind.into(), tense: crate::word::Tense::Present, body }
+        Word { kind: kind.into(), tense: crate::word::Tense::Present, body, at: 0 }
     }
 
     #[test]

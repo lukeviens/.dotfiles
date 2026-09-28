@@ -52,8 +52,8 @@ row("scroll", "d", "M-d",  scroll("C-d", "NPage", "down"))   -- vim C-d / alt-sc
 row("scroll", "u", "M-u",  scroll("C-u", "PPage", "up"))     -- vim C-u / alt-screen PageUp / copy-mode
 row("tab", "prev", "M-[", "previous-window")   -- tmux windows (tabs) — unconditional, no defer
 row("tab", "next", "M-]", "next-window")       -- one town rung out from pane/split point-nav
-row("flip",   "o", "M-o", defer("vim", "C-o", 'run-shell -b "$TOWN talk future back"'))     -- back: nvim jumplist, else the trail
-row("flip",   "i", "M-i", defer("vim", "C-i", 'run-shell -b "$TOWN talk future forward"'))  -- forward: the same
+row("flip",   "o", "M-o", defer("vim", "C-o", 'run-shell -b "$TOWN talk future place step=1 kind=session"'))     -- back: nvim jumplist, else the trail
+row("flip",   "i", "M-i", defer("vim", "C-i", 'run-shell -b "$TOWN talk future place step=-1 kind=session"'))  -- forward: the same
 row("split",  "lr", "M-%",  "split-window -h")       -- split left/right
 row("split",  "tb", "M-\"", "split-window -v")       -- split top/bottom
 
@@ -72,7 +72,7 @@ emit(HOME .. "/.cache/town/transport", table.concat(man))
 -- hot-reload: push the regenerated binds into the live tmux NOW (no more manual `source-file`), and
 -- watch tmux.conf so hand edits to it reload too — the same save-to-reload DX as the residents + HS.
 -- quiet + best-effort: a no-op if tmux isn't running. (In tests os.execute is stubbed, so hermetic.)
-local TMUX = (type(bins) == "table" and bins.tmux) or "tmux"
+local TMUX = bins.tmux
 local function source(file) os.execute(TMUX .. " source-file " .. file .. " 2>/dev/null") end
 source(HOME .. "/.config/tmux/town-transport.conf")   -- the binds we just wrote
 
