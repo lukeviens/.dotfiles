@@ -33,6 +33,7 @@ setopt PROMPT_SUBST
 PROMPT='%F{$active}${vcs_info_msg_0_}%f %F{$subtle}%n@%m%f %F{$fg}%1~%f %F{$active}%#%f '
 
 export PATH="/opt/homebrew/bin:$PATH"
+export PATH="$HOME/.local/share/nvim/mason/bin:$PATH"   # gopls, stylua, gofumpt, etc. — usable from any shell, not just nvim
 
 # zoxide (smart directory jumping — also powers sesh's dir results)
 eval "$(zoxide init zsh)"

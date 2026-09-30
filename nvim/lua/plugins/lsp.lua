@@ -1,144 +1,73 @@
 return {
 	"neovim/nvim-lspconfig",
-	dependencies = {
-		"williamboman/mason.nvim",
-		"williamboman/mason-lspconfig.nvim",
-		"hrsh7th/cmp-nvim-lsp",
-		"hrsh7th/cmp-buffer",
-		"hrsh7th/nvim-cmp",
-		"L3MON4D3/LuaSnip",
-		"saadparwaiz1/cmp_luasnip",
-	},
-
+	dependencies = { "williamboman/mason.nvim", "williamboman/mason-lspconfig.nvim" },
 	config = function()
-		local cmp = require('cmp')
-		local cmp_lsp = require("cmp_nvim_lsp")
-		local on_attach = function(client, bufnr)
-			local opts = function(desc) return { buffer = bufnr, desc = desc } end
-
-			vim.keymap.set("n", "gD", require('telescope.builtin').lsp_type_definitions, opts("Go to Type Definition"))
-			vim.keymap.set("n", "gd", require('telescope.builtin').lsp_definitions, opts("Go to Definition"))
-			vim.keymap.set("n", "gi", require('telescope.builtin').lsp_implementations, opts("Go to Implementation"))
-			vim.keymap.set("n", "gr", require('telescope.builtin').lsp_references, opts("Symbol References"))
-			vim.keymap.set("n", "K", vim.lsp.buf.hover, opts("LSP Hover"))
-			vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, opts("Previous Diagnostic"))
-			vim.keymap.set("n", "]d", vim.diagnostic.goto_next, opts("Next Diagnostic"))
-			vim.keymap.set("n", "gl", vim.diagnostic.open_float, opts("Open Diagnostic Float"))
-		end
-		local capabilities = vim.tbl_deep_extend(
-			"force",
-			{},
-			vim.lsp.protocol.make_client_capabilities(),
-			cmp_lsp.default_capabilities())
-
 		require("mason").setup()
-		require("mason-lspconfig").setup({
-			ensure_installed = {
-				"pylsp",
-				"rust_analyzer",
-				"terraformls",
-				"lua_ls",
-				"clangd",
-				"gopls",
-				"vtsls",
-			},
-			handlers = {
-				function(server_name) -- default handler (optional)
 
-					require("lspconfig")[server_name].setup {
-						capabilities = capabilities,
-						on_attach = on_attach
-					}
-				end,
+		-- one attach point for every server (mason-managed or hand-started, e.g. i's LSP in
+		-- autoload.lua): keymaps, native completion, inlay hints, format-on-save.
+		vim.api.nvim_create_autocmd("LspAttach", {
+			callback = function(args)
+				local bufnr = args.buf
+				local client = assert(vim.lsp.get_client_by_id(args.data.client_id))
+				local opts = function(desc) return { buffer = bufnr, desc = desc } end
 
-	
-				["pylsp"] = function()
-					local lspconfig = require("lspconfig")
-					lspconfig.pylsp.setup {
-						capabilities = capabilities,
-						on_attach = on_attach,
-						settings = {
-							pylsp = {
-								plugins = {
-									pycodestyle = {
-										ignore = {'E203', 'E302', 'E501', 'E303'}
-									}
-								}
-							}
-						}
-					}
-				end,
+				local tb = require("telescope.builtin")
+				vim.keymap.set("n", "gd", tb.lsp_definitions, opts("Go to Definition"))
+				vim.keymap.set("n", "gD", tb.lsp_type_definitions, opts("Go to Type Definition"))
+				vim.keymap.set("n", "gi", tb.lsp_implementations, opts("Go to Implementation"))
+				vim.keymap.set("n", "gr", tb.lsp_references, opts("References"))
+				vim.keymap.set("n", "<leader>ds", tb.lsp_document_symbols, opts("Document Symbols"))
+				vim.keymap.set("n", "gl", vim.diagnostic.open_float, opts("Diagnostic Float"))
+				vim.keymap.set("n", "K", vim.lsp.buf.hover, opts("Hover"))
+				vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, opts("Rename"))
+				vim.keymap.set({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, opts("Code Action"))
+				vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, opts("Previous Diagnostic"))
+				vim.keymap.set("n", "]d", vim.diagnostic.goto_next, opts("Next Diagnostic"))
 
-				["lua_ls"] = function()
-					local lspconfig = require("lspconfig")
-					lspconfig.lua_ls.setup {
-						capabilities = capabilities,
-						on_attach = on_attach,
-						settings = {
-							Lua = {
-								diagnostics = {
-									globals = { "vim", "it", "describe", "before_each", "after_each" },
-								}
-							}
-						}
-					}
-				end,
-
-				["vtsls"] = function()
-					local lspconfig = require("lspconfig")
-					lspconfig.vtsls.setup {
-						capabilities = capabilities,
-						on_attach = on_attach,
-						settings = {
-							typescript = {
-								tsserver = {
-									maxTsServerMemory = 8192,
-								},
-							},
-							vtsls = {
-								autoUseWorkspaceTsdk = true,
-							},
-						},
-					}
-				end,
-			}
-		})
-
-		local cmp_select = { behavior = cmp.SelectBehavior.Select }
-
-		cmp.setup({
-			snippet = {
-				expand = function(args)
-					require('luasnip').lsp_expand(args.body) -- For `luasnip` users.
-				end,
-			},
-			mapping = cmp.mapping.preset.insert({
-				['<C-p>'] = cmp.mapping.select_prev_item(cmp_select),
-				['<C-n>'] = cmp.mapping.select_next_item(cmp_select),
-				['<C-y>'] = cmp.mapping.confirm({ select = true }),
-				["<C-Space>"] = cmp.mapping.complete(),
-			}),
-			sources = cmp.config.sources({
-				{ name = 'nvim_lsp' },
-				{ name = 'luasnip' }, -- For luasnip users.
-				}, {
-					{ name = 'buffer' },
-			})
+				if client:supports_method("textDocument/completion") then
+					vim.lsp.completion.enable(true, client.id, bufnr, { autotrigger = true })
+				end
+				if client:supports_method("textDocument/inlayHint") then
+					vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
+				end
+				if client:supports_method("textDocument/formatting") then
+					vim.api.nvim_create_autocmd("BufWritePre", {
+						buffer = bufnr,
+						callback = function()
+							vim.lsp.buf.format({ bufnr = bufnr, id = client.id, timeout_ms = 3000 })
+						end,
+					})
+				end
+			end,
 		})
 
 		vim.diagnostic.config({
-			virtual_text = false,
+			virtual_text = { current_line = true },
 			signs = true,
-			update_in_insert = false,
 			underline = true,
-			float = {
-				focusable = false,
-				style = "minimal",
-				border = "rounded",
-				source = "always",
-				header = "",
-				prefix = "",
+			update_in_insert = false,
+			float = { focusable = false, style = "minimal", border = "rounded", source = "always" },
+		})
+
+		-- per-server settings, native API — mason-lspconfig enables each installed server for us
+		-- (automatic_enable defaults true: it calls vim.lsp.enable() per server it manages).
+		vim.lsp.config("lua_ls", { settings = { Lua = { diagnostics = { globals = { "vim" } } } } })
+		vim.lsp.config("pylsp", {
+			settings = { pylsp = { plugins = { pycodestyle = { ignore = { "E203", "E302", "E501", "E303" } } } } },
+		})
+		vim.lsp.config("gopls", {
+			settings = { gopls = { gofumpt = true, staticcheck = true, usePlaceholders = true } },
+		})
+		vim.lsp.config("vtsls", {
+			settings = {
+				typescript = { tsserver = { maxTsServerMemory = 8192 } },
+				vtsls = { autoUseWorkspaceTsdk = true },
 			},
 		})
-	end
+
+		require("mason-lspconfig").setup({
+			ensure_installed = { "pylsp", "rust_analyzer", "terraformls", "lua_ls", "clangd", "gopls", "vtsls" },
+		})
+	end,
 }

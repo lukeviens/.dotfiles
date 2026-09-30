@@ -1,9 +1,3 @@
--- Ensure vim.g.bigfile_size is set to a default value
-vim.g.bigfile_size = 1024 * 1024 * 1.5 -- 1.5 MB
-
--- i know better than lazy vim
-vim.g.lazyvim_check_order = false
-
 -- have to set this early or else nvim freaks out
 vim.opt.termguicolors = true
 

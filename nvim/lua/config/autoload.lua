@@ -162,19 +162,10 @@ vim.api.nvim_create_autocmd("FileType", {
 		-- i identifiers include - / ?
 		vim.opt_local.iskeyword:append("-,/,?")
 
-		-- LSP keymaps (buffer-local)
-		local opts = { buffer = 0 }
-		vim.keymap.set("n", "gd", require('telescope.builtin').lsp_definitions, opts)
-		vim.keymap.set("n", "gr", require('telescope.builtin').lsp_references, opts)
-		vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
-		vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, opts)
-		vim.keymap.set("n", "]d", vim.diagnostic.goto_next, opts)
-		vim.keymap.set("n", "gl", vim.diagnostic.open_float, opts)
-		vim.keymap.set("n", "<leader>ds", require('telescope.builtin').lsp_document_symbols, opts)
-
+		-- keymaps come free: this fires LspAttach same as any mason-managed server (see lsp.lua)
 		vim.lsp.start({
 			name = "i-lsp",
-			cmd = { "/Users/lukeviens/code/i/i/i", "worlds/lsp.i" },
+			cmd = { vim.fn.expand("~/i/.build/i-c"), vim.fn.expand("~/i/i/tooling/lsp.i") },
 			root_dir = vim.fs.dirname(
 				vim.fs.find({ ".git" }, { upward = true })[1]
 			),
