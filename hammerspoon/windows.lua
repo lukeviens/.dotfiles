@@ -68,7 +68,13 @@ function M.wez(verb, dir)
   local key = T[verb] and T[verb][dir]
   if key then send_bytes(keyBytes(key)) end
 end
-function M.wez_zoom() send_bytes("\\033[13;5u") end   -- ⏎ → resize-pane -Z (the ⌃⏎ User0 key)
+-- the middle rung, in a terminal: WezTerm's own fullscreen (edge-to-edge, no macOS Space, no
+-- animation) — distinct from maximize(), and faster than the OS-level AXFullScreen toggle since
+-- it skips the Spaces transition entirely. A real synthetic keystroke, not a byte injection: the
+-- ⌘⏎ binding is a native WezTerm action (see wezterm.lua) and only fires on an actual key event.
+function M.fullscreen()
+  hs.eventtap.keyStroke({ "cmd" }, "return", 0)
+end
 
 -- scroll the focused mac window a page (the `scroll` verb's mac path — a mac app, not the terminal).
 -- A scroll event has no notion of "focus" — the OS routes it by the event's own location, which

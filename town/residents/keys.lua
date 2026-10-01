@@ -43,6 +43,6 @@ for _, key in ipairs({ "H", "J", "K", "L" }) do m["leader " .. key] = surface("o
 -- restore the mac window). Caps ⇧⏎ always goes straight to that same mac maximize, even from
 -- inside a terminal pane — same action either way, so one shared label.
 m["leader return"]   = arrange("max", "zoom")
-m["leader S-return"] = arrange("max", "zoom")
+m["leader S-return"] = arrange("max", "maximize")
 
 return keymap(m)

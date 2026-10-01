@@ -127,12 +127,18 @@ config.hide_tab_bar_if_only_one_tab = false
 -- send Ctrl+Enter as a distinct sequence so tmux can bind it (level-aware ⌃⏎ zoom)
 config.keys = {
   { key = 'Enter', mods = 'CTRL', action = wezterm.action.SendString('\x1b[13;5u') },
-  -- ⌥hjkl → legacy Meta bytes (ESC+letter), which tmux's `bind -n M-…` matches. (Other ⌥
-  -- keys still compose their special chars — only these four are intercepted.)
+  -- ⌥hjkl/i/o → legacy Meta bytes (ESC+letter), so tmux's `bind -n M-…` matches. (Other ⌥
+  -- keys still compose their special chars — only these six are intercepted.)
   { key = 'h', mods = 'ALT', action = wezterm.action.SendString('\x1bh') },
   { key = 'j', mods = 'ALT', action = wezterm.action.SendString('\x1bj') },
   { key = 'k', mods = 'ALT', action = wezterm.action.SendString('\x1bk') },
   { key = 'l', mods = 'ALT', action = wezterm.action.SendString('\x1bl') },
+  { key = 'i', mods = 'ALT', action = wezterm.action.SendString('\x1bi') },
+  { key = 'o', mods = 'ALT', action = wezterm.action.SendString('\x1bo') },
+  -- WezTerm's own fullscreen (no macOS Space, no animation) — explicit, not relied on as a
+  -- default. Hammerspoon triggers this with a real synthetic keystroke, not the byte-injection
+  -- path above: a native action only fires on an actual key event, never on bytes in the pty.
+  { key = 'Return', mods = 'CMD', action = wezterm.action.ToggleFullScreen },
 }
 
 -- macOS: plain letters go through the input-method layer, control chords don't. After a macOS

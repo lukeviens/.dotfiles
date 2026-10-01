@@ -1,18 +1,12 @@
--- mode.lua — town-mode: a modal editor for the tiled desktop. Caps (→ F18 via Karabiner) is the
--- DEPTH axis — tap to enter at the inner layer, tap again to pop out toward the mac window. HOLD is
--- momentary (exits on release); esc also exits, and stays open otherwise. Inside, keys are
--- swallowed EXCLUSIVELY so nothing else can steal them. hjkl moves the current register
--- (point/edge/cell) at the current depth, against the innermost surface; %/" split. See
--- town-motion-model in the notes.
+-- mode.lua — town-mode: a modal editor for the tiled desktop. Caps (→ F18) taps through DEPTH
+-- (inner pane → mac window); a HOLD is momentary. Keys are swallowed exclusively while open. hjkl
+-- moves the current register (point/edge/cell) at the current depth. See town-motion-model.
 local M = {}
 
 local leader, modeOn = hs.hotkey.modal.new(), false
 local usedHold = false
 local register = "point"             -- what hjkl grabs: point (cursor) | edge (wall) | cell (tile)
--- how far OUT: 0 = inner (pane/split); in any terminal pane, 1 = a middle rung whose meaning is the
--- register's own (see ladder.plan); DMAX = the mac window. DMAX is recomputed on every Caps tap
--- (below): 2 rungs in the terminal, else 1 — same shape it's always been outside a terminal pane.
-local depth, DMAX = 0, 1
+local depth, DMAX = 0, 1             -- how far out; DMAX is 2 in a terminal (a middle rung), else 1
 local keys = require("keys")         -- the keymap as town wrote it (~/.cache/town/keys)
 local townmodetap                    -- the exclusive-mode eventtap (held; M.stop roots it from GC)
 
@@ -29,15 +23,11 @@ function M.leave()
   if modeOn then leader:exit() end
 end
 
--- windows: the window module (glide + resize). warm: places.list_windows (cache warm-up).
 function M.start(town, windows, warm)
-  -- a menu taking the keyboard yields the mode
   town.listen("menu", function(w) if w.tense == "future" and w.body.choices then M.leave() end end)
 
-  -- Caps m opens the mac menu bar via AX (menunav — no synthetic keys, this system UI layer
-  -- ignores those). LOCAL, not town-routed: a town round-trip is just async enough that hjkl
-  -- pressed right after m could fire before `inMenu` flips, landing in the ladder instead (this
-  -- was a real, confirmed bug) — same reasoning as split/scrollKey already being local-only.
+  -- Caps m opens the mac menu bar (AX, no synthetic keys). Local, not town-routed: a round-trip
+  -- is slow enough that hjkl right after m could land before `inMenu` flips (a confirmed bug).
   local inMenu = false
   local inTerm = windows.in_term   -- "am I in the terminal?" — decided in windows (it owns the transport)
   local inVim = windows.in_vim     -- "is that pane running vim?" — also windows' (it owns the transport)
@@ -76,26 +66,25 @@ function M.start(town, windows, warm)
     inMenu = menunav.open()
     if inMenu then hud.badge("menu") else hud.badge(register, locate(depth)) end
   end)
-  -- ⇧F: fuzzy-search & click any labeled on-screen element. Deferred a tick — leaving the modal
-  -- from inside its own key dispatch is asking for trouble (same reason plain `f` only leaves
-  -- async, via town's round trip).
+  -- ⇧F: fuzzy-search & click any labeled element. Deferred a tick — leaving the modal from inside
+  -- its own key dispatch is asking for trouble.
   leader:bind({ "shift" }, "f", function()
     usedHold = true
     hs.timer.doAfter(0, function() M.leave(); reach.open() end)
   end)
-  -- Caps ⏎ zooms the INNER thing: the tmux pane in the terminal (HS routes it), else maximize ↔
-  -- restore the mac window (through town). Caps ⇧⏎ skips the pane check and always goes straight
-  -- to that same mac maximize (see keys.lua) — same action, just without the inner detour.
+  -- Caps ⏎: pane zoom (inner) → wezterm fullscreen (middle) → mac maximize (outer). ⇧⏎ always
+  -- goes straight to mac maximize.
   leader:bind({}, "return", function()
     usedHold = true
     if inMenu then menunav.select(); inMenu = false; hud.badge(register, locate(depth))
-    elseif depth == 0 and inTerm() then windows.wez_zoom()   -- inner: zoom the pane
-    else onKey("return") end                                 -- outer/mac: maximize the window
+    elseif inTerm() and depth == 0 then windows.wez("zoom", "z")  -- inner: zoom the pane
+    elseif inTerm() and depth == 1 then M.leave(); windows.fullscreen()  -- middle: leave first, or our
+    -- own exclusive tap (still swallowing while modeOn) eats the synthetic ⌘⏎ before WezTerm sees it
+    else onKey("return") end                                       -- outer, or no terminal: mac maximize
   end)
 
-  -- REGISTER: what hjkl grabs (the mesh element). point = the cursor (0D, default) → navigate;
-  -- edge = a wall (1D) → resize; cell = a tile (2D) → swap. e/c arm edge/cell; the same key again,
-  -- or any exit, returns to point. Only hjkl reads the register; the badge shows it.
+  -- register: what hjkl grabs — point (cursor), edge (wall/resize), cell (tile/swap). e/c arm
+  -- edge/cell; the same key again, or any exit, returns to point.
   local function arm(reg)
     return function()
       usedHold = true
@@ -108,9 +97,7 @@ function M.start(town, windows, warm)
   leader:bind({ "shift" }, "e", arm("edge"))   -- Shift is meaningless on an arm key, so ⇧e = e:
   leader:bind({ "shift" }, "c", arm("cell"))   -- you can roll Caps+⇧+c+hjkl for e.g. cell-out in one motion
 
-  -- hjkl moves the grabbed element against the innermost surface — ladder.plan decides what that
-  -- means (which surface owns depth 0, whether there's a middle rung, what the outer rung is);
-  -- this just executes whatever it says.
+  -- hjkl moves the grabbed element; ladder.plan decides what that means at this depth/surface.
   local MENUNAV = { h = menunav.left, j = menunav.down, k = menunav.up, l = menunav.right }
   local function doMotion(d, atDepth)
     if inMenu then MENUNAV[d](); return end
@@ -128,8 +115,7 @@ function M.start(town, windows, warm)
     leader:bind({ "shift" }, d, outer, nil, outer)  -- ⇧hjkl: the SAME motion at the OUTERMOST layer (Shift always means all the way out, here too)
   end
 
-  -- % / " split the focused cell (left/right, top/bottom) at the current layer — a structure op,
-  -- orthogonal to the register. Terminal → tmux split-window; mac tiling split comes with depth.
+  -- % / " split the focused cell — a structure op, orthogonal to the register.
   local function split(dir)   -- % = lr, " = tb
     return function()
       usedHold = true
@@ -139,10 +125,8 @@ function M.start(town, windows, warm)
   leader:bind({ "shift" }, "5", split("lr"))   -- % → split left/right
   leader:bind({ "shift" }, "'", split("tb"))   -- " → split top/bottom
 
-  -- Caps d / u : page down / up. You always scroll the content you're LOOKING at, so this ignores
-  -- depth (unlike motion): in the terminal → the pane (vim C-f/C-b, else copy-mode); a mac app →
-  -- the window. Register-independent, like split. (Depth-gating it scrolled the terminal via a mac
-  -- event at outer depth — janky; scrolling isn't a layer motion.)
+  -- Caps d/u: page down/up. Scrolls whatever you're looking at — register- and depth-independent,
+  -- like split.
   local function scrollKey(dir)
     return function()
       usedHold = true
@@ -152,16 +136,9 @@ function M.start(town, windows, warm)
   leader:bind({}, "d", scrollKey("d"))
   leader:bind({}, "u", scrollKey("u"))
 
-  -- Caps o / i flip back / forward: in a vim pane it's nvim's jumplist (the transport defers there);
-  -- in a shell pane the town trail (defer's fallback); in a mac app, the trail directly through town.
-  local function flip(press)
-    return function()
-      usedHold = true
-      if inTerm() then windows.wez("flip", press) else onKey(press) end
-    end
-  end
-  leader:bind({}, "o", flip("o"))
-  leader:bind({}, "i", flip("i"))
+  -- Caps o/i walk the same town trail from every app, including WezTerm.
+  leader:bind({}, "o", function() onKey("o") end)
+  leader:bind({}, "i", function() onKey("i") end)
   leader:bind({ "shift" }, "return", function() onKey("S-return") end)
   leader:bind({ "shift" }, "t", function() onKey("T") end)   -- ⇧T → random theme
   leader:bind({ "shift" }, "/", function()   -- ? toggles the derived key card
@@ -175,17 +152,11 @@ function M.start(town, windows, warm)
     else M.leave() end
   end)
 
-  -- Caps (→ F18 via Karabiner) is the DEPTH axis. First press enters at the inner layer (⇧ enters
-  -- at the top); each further TAP pops out one layer (wrapping), so hjkl/registers act on the pane
-  -- (or split), then — in any terminal pane — a middle rung (tmux windows for point, the tmux pane
-  -- itself for edge in a vim split), then the mac window. HOLD is momentary — a hold that used keys
-  -- exits on release. esc exits; otherwise the mode stays open.
+  -- Caps is the depth axis: each tap pops out one layer (wraps), ⇧ jumps to the top. A hold that
+  -- used keys exits on release; a clean tap or esc otherwise.
   townmodetap = hs.eventtap.new({ hs.eventtap.event.types.keyDown, hs.eventtap.event.types.keyUp }, function(e)
     if e:getKeyCode() ~= hs.keycodes.map.f18 then
-      -- exclusive mode: while it's open, swallow every keyDown that ISN'T a town-mode key
-      -- (modifier chords, and any unbound key) so nothing else on the machine responds.
-      -- town keys — plain a-z/0-9/// return/escape, or a shift combo (hjkl/return///t/f and 5/'
-      -- for % ") — fall through to the modal below.
+      -- exclusive: swallow every keyDown that isn't a town-mode key, so nothing else responds.
       if modeOn and e:getType() == hs.eventtap.event.types.keyDown then
         local f, c = e:getFlags(), hs.keycodes.map[e:getKeyCode()]
         local modekey   -- is this a town-mode key (falls through to the modal), or noise to swallow?
@@ -209,12 +180,9 @@ function M.start(town, windows, warm)
         hud.badge(register, locate(depth))   -- repaint the depth marker; stay in the mode
       end
     else                                -- Caps released
-      -- a hold that used keys → momentary, exit on release; EXCEPT mid-menu-nav, which needs
-      -- several more keystrokes (hjkl, return) and would otherwise exit right after the very
-      -- `Caps m` chord that opened it, orphaning the real (still open) menu with nothing tracking
-      -- it — confirmed live as the actual cause of the menu desyncing between sessions.
+      -- a hold that used keys exits on release, except mid-menu-nav (Caps m opening a menu is
+      -- itself a "used key" hold — exiting right then would orphan the still-open menu).
       if usedHold and not inMenu then M.leave() end
-      -- a clean tap (entry or depth pop) leaves the mode open; esc / a picker close it
     end
     return true                         -- consume F18
   end)

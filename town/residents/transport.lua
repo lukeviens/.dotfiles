@@ -56,6 +56,7 @@ row("flip",   "o", "M-o", defer("vim", "C-o", 'run-shell -b "$TOWN talk future p
 row("flip",   "i", "M-i", defer("vim", "C-i", 'run-shell -b "$TOWN talk future place step=-1 kind=session"'))  -- forward: the same
 row("split",  "lr", "M-%",  "split-window -h")       -- split left/right
 row("split",  "tb", "M-\"", "split-window -v")       -- split top/bottom
+row("zoom",   "z", "M-z",   "resize-pane -Z")         -- the pane, inner rung (Caps ⏎ / ⌃⏎)
 
 -- derive the two artifacts. it's all tmux config syntax (source-filed, not shell), so the nested
 -- if/braces/$TOWN survive verbatim; only keys holding % or " need quoting for the tmux parser.
