@@ -1,5 +1,5 @@
--- ladder.lua — the depth ladder's one decision: given a register, a direction, a depth, and which
--- surface is frontmost, what should hjkl do and where is that. Pure (no hs.* calls) so it's the
+-- ladder.lua — the depth ladder's one decision: given an action, direction, depth, and which
+-- surface is frontmost, what should happen and where. Pure (no hs.* calls) so it's the
 -- single source of truth mode.lua executes against AND what town/tests/ladder.rs sweeps directly —
 -- no separate doMotion/locate to keep in sync.
 local M = {}
@@ -9,6 +9,11 @@ local STEP = { prev = -1, next = 1 }                                -- same read
 
 -- ctx = { inTerm, inVim, inChrome }. `verb` is the grabbed register for hjkl, or "flip"
 -- for o/i. `d` may be nil when only `where` is wanted (a badge repaint).
+--
+-- flip (o/i) means ONE thing everywhere: walk the trail of places at this depth, most-recent
+-- first. So the ladder only names WHICH context the key is reported as (`at`); the keymap says
+-- which kind of place that context walks, and town's trail does the walking. A surface that
+-- reports its places needs no branch here — that's the test of whether a new one slots in.
 function M.plan(verb, d, atDepth, DMAX, ctx)
   if verb == "flip" then
     if ctx.inTerm and atDepth == 0 then
@@ -16,7 +21,7 @@ function M.plan(verb, d, atDepth, DMAX, ctx)
     elseif ctx.inTerm and atDepth < DMAX then
       return { act = "onkey", at = "tmux", dir = d }
     elseif ctx.inChrome and atDepth == 0 then
-      return { act = "chrome-cycle", step = (d == "o") and -1 or 1 }
+      return { act = "onkey", at = "chrome", dir = d }
     else
       return { act = "onkey", at = "leader", dir = d }
     end

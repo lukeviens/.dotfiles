@@ -40,6 +40,10 @@ fn a_key_becomes_an_intention() {
     let tmux_i = say(&lua, &keys, json!({"kind":"key","body":{"at":"tmux","press":"i"}})).unwrap();
     assert_eq!(tmux_i, json!({"kind":"place","tense":"future","body":{"step":-1,"kind":"session"}}));
 
+    // and the same key inside Chrome walks its tabs — one more context, no new mechanism
+    let chrome_o = say(&lua, &keys, json!({"kind":"key","body":{"at":"chrome","press":"o"}})).unwrap();
+    assert_eq!(chrome_o, json!({"kind":"place","tense":"future","body":{"step":1,"kind":"tab"}}));
+
     // lowercase hjkl moves focus; uppercase HJKL is HS-owned (the "outer" motion), so town never
     // routes it — a surface key, like the registers.
     let mv = say(&lua, &keys, json!({"kind":"key","body":{"at":"leader","press":"h"}})).unwrap();
@@ -152,6 +156,32 @@ fn window_and_session_flips_keep_independent_positions() {
     assert_eq!(say(&lua, &place, step("session", 1)).unwrap()["body"]["name"], "one");
     assert_eq!(say(&lua, &place, step("window", -1)).unwrap()["body"]["app"], "B");
     assert_eq!(say(&lua, &place, step("session", -1)).unwrap()["body"]["name"], "two");
+}
+
+// ── place: a tab is a place like any other. Chrome's tabs all live in ONE mac window, so they are
+// told apart by Chrome's own stable tab id — not by the app name (which would fold every tab into
+// a single place and make Caps o/i inside Chrome a no-op) and not by position (which renumbers the
+// moment a tab is closed or dragged). This is the whole reason o/i can mean ONE thing everywhere:
+// recency, resolved by town, for any surface that reports what it owns. ──
+#[test]
+fn tabs_of_one_window_are_separate_places_and_walk_their_own_trail() {
+    let (lua, place) = resident("place", json!({}), json!({}));
+    let tab = |id: i64| json!({"kind":"place","tense":"present",
+        "body":{"kind":"tab","app":"Google Chrome","winId":7,"tabId":id}});
+    let step = |kind: &str, n: i32| json!({"kind":"place","tense":"future","body":{"kind":kind,"step":n}});
+
+    let win = |app: &str| json!({"kind":"place","tense":"present","body":{"kind":"window","app":app}});
+    for app in ["WezTerm", "Google Chrome"] { say(&lua, &place, win(app)); }
+    for id in [101, 102, 103] { say(&lua, &place, tab(id)); }   // tabs seen = [103, 102, 101]
+
+    // back walks tabs by recency, not by tab position
+    assert_eq!(say(&lua, &place, step("tab", 1)).unwrap()["body"]["tabId"], 102);
+    assert_eq!(say(&lua, &place, step("tab", 1)).unwrap()["body"]["tabId"], 101);
+    assert_eq!(say(&lua, &place, step("tab", -1)).unwrap()["body"]["tabId"], 102);
+
+    // the tab cursor and the window cursor are independent, as window and session already are
+    assert_eq!(say(&lua, &place, step("window", 1)).unwrap()["body"]["app"], "WezTerm");
+    assert_eq!(say(&lua, &place, step("tab", -1)).unwrap()["body"]["tabId"], 103);
 }
 
 // ── place: a flip drops its OWN echo. Flipping focuses a real window/session and the surface

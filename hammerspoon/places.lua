@@ -134,11 +134,30 @@ function M.report_front()
     -- hs.execute here spawned a process on the UI thread on EVERY terminal focus — the exact
     -- per-event stall the persistent bus exists to prevent. Talk the place from the callback.
     sh(TX .. " list-clients -F '#{client_session}' 2>/dev/null", function(_, out)
-      if hs.application.frontmostApplication() ~= app then return end
+      local front = hs.application.frontmostApplication()
+      if not front or front:pid() ~= app:pid() or lastFocus ~= focus then return end
       local s = out and out:match("[^\r\n]+")
       if s then town.talk("place", { kind = "session", name = s }) end
     end)
+  elseif name == "Google Chrome" then
+    M.report_tab()   -- the window place, then the tab inside it — both rungs have somewhere to return to
   end
+end
+
+-- Chrome's active tab is a place of its own — the depth-0 rung inside Chrome, the way a tmux
+-- session is the middle rung inside the terminal. It changes with NO mac window focus change, so
+-- report_front never sees it; a tab switch always retitles the window, so the window filter's
+-- title change is the signal. Deduped by tab id, because a page that retitles itself (an unread
+-- count ticking) fires the same event and must not write a place every time.
+local lastTab
+function M.report_tab()
+  if not chrome.in_chrome() then return end
+  chrome.active(function(t)
+    if not t or t.tabId == lastTab then return end
+    if not chrome.in_chrome() then return end   -- focus moved on while the query was out
+    lastTab = t.tabId
+    town.talk("place", t)
+  end)
 end
 
 -- tmux sessions, async (never a UI-thread spawn) — the terminal half of the picker's live list.
@@ -166,6 +185,8 @@ function M.start(bus)
   winfilter:subscribe({ hs.window.filter.windowCreated, hs.window.filter.windowDestroyed },
     function() win_cache = nil end)
   winfilter:subscribe(hs.window.filter.windowFocused, function() M.report_front() end)
+  -- a Chrome tab switch moves no mac window, and shows up only as a retitle
+  winfilter:subscribe(hs.window.filter.windowTitleChanged, function() M.report_tab() end)
 
   -- town owns the menus; the surface says what exists when asked.
   -- the index: every place that exists, said as one `places` fact. Refreshed when a menu is
@@ -206,18 +227,23 @@ function M.start(bus)
     local p = w.body
     if w.tense ~= "future" then return end
     if p.kind == "tab" then
-      if p.winId and p.tabIndex then chrome.activate(p.winId, p.tabIndex) end
+      chrome.activate(p, function() town.talk("place", p, "past") end)   -- gone → drop it, keep walking
       return
     end
     if not (p.kind == "window" or p.kind == "app") then return end
-    local a = p.app and hs.application.get(p.app)
+    local a = hs.application.get(p.app or p.name)
     if not a then
+      if p.kind == "window" and p.winId then town.talk("place", p, "past"); return end
       if p.app or p.name then hs.application.launchOrFocus(p.app or p.name) end
       return                                        -- not running → launch it
     end
     local wins, target = a:allWindows(), nil
     for _, win in ipairs(wins) do                   -- stable id first; titles change as content changes
       if p.winId and win:id() == tonumber(p.winId) then target = win; break end
+    end
+    if p.kind == "window" and p.winId and not target then
+      town.talk("place", p, "past")             -- a closed window: remove it and keep walking
+      return
     end
     if not target then
       for _, win in ipairs(wins) do

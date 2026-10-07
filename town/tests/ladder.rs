@@ -46,6 +46,8 @@ fn flip(lua: &Lua, press: &str, at_depth: i64, dmax: i64, ctx: Ctx) -> Value {
     plan(lua, "flip", Some(press), at_depth, dmax, ctx)
 }
 
+/// flip is recency everywhere: outside the terminal the ladder only names the CONTEXT, and the
+/// keymap says which kind of place that context walks (leader→window, tmux→session, chrome→tab).
 #[test]
 fn flip_follows_the_depth_and_surface() {
     let lua = ladder();
@@ -53,7 +55,7 @@ fn flip_follows_the_depth_and_surface() {
     assert_eq!(flip(&lua, "i", 0, 2, term(false)), json!({"act":"wez","verb":"flip","dir":"i"}));
     assert_eq!(flip(&lua, "o", 1, 2, term(true)), json!({"act":"onkey","at":"tmux","dir":"o"}));
     assert_eq!(flip(&lua, "i", 2, 2, term(true)), json!({"act":"onkey","at":"leader","dir":"i"}));
-    assert_eq!(flip(&lua, "o", 0, 1, chrome()), json!({"act":"chrome-cycle","step":-1}));
+    assert_eq!(flip(&lua, "o", 0, 1, chrome()), json!({"act":"onkey","at":"chrome","dir":"o"}));
     assert_eq!(flip(&lua, "i", 1, 1, chrome()), json!({"act":"onkey","at":"leader","dir":"i"}));
     assert_eq!(flip(&lua, "o", 0, 1, Ctx::default()), json!({"act":"onkey","at":"leader","dir":"o"}));
 }

@@ -21,7 +21,7 @@ local function pkey(p)               -- identity: titled windows differ by title
     if t and t ~= "" then return "window:" .. (p.app or "") .. ":" .. t end
     return "app:" .. (p.app or "")
   end
-  if p.kind == "tab" then return "tab:" .. tostring(p.winId) .. ":" .. tostring(p.tabIndex) end
+  if p.kind == "tab" then return "tab:" .. tostring(p.tabId or (tostring(p.winId) .. ":" .. tostring(p.tabIndex))) end
   return (p.kind or "") .. ":" .. (p.app or p.name or "")
 end
 

@@ -14,10 +14,21 @@ local townmodetap                    -- the exclusive-mode eventtap (held; M.sto
 -- it the current register/depth and the hint items, and it renders.
 local hud = require("hud")
 local time = require("time")         -- the ? card's second page: town's pace as a table
-local chrome = require("chrome")   -- Chrome's own depth-0 rung: cycling its tabs (see ladder.plan)
-local ladder = require("ladder")   -- the one decision: register+depth+surface → what hjkl does
+local chrome = require("chrome")   -- Chrome's depth-0 rung for hjkl: spatial tab cycling (see ladder.plan)
+local ladder = require("ladder")   -- the one decision: action+depth+surface → what a key does
 local menunav = require("menunav")   -- drives an open mac menu (leader m) purely via AX, no keys
 local reach = require("reach")       -- search-and-click any labeled on-screen element (leader ⇧F)
+
+-- the keys that mean something with Shift held, so the exclusive tap lets them through to the modal
+-- instead of swallowing them. Everything here has a `leader:bind({ "shift" }, …)` below; anything
+-- that doesn't would be eaten silently, which is how ⇧o/⇧i went nowhere.
+--   hjkl/oi → the same motion at the outermost layer · 5 ' → % " · c e → roll-arm a register
+--   return → mac maximize · t → random theme · / → the ? card · f → reach
+local SHIFTED = {}
+for k in ("hjkl oi 5 ' c e t f /"):gmatch("%S+") do
+  for ch in k:gmatch(".") do SHIFTED[ch] = true end
+end
+SHIFTED["return"] = true
 
 function M.leave()
   if modeOn then leader:exit() end
@@ -54,9 +65,9 @@ function M.start(town, windows, warm)
 
   -- a mode key reports to town and KEEPS the mode open (chain-friendly). the mode leaves on a
   -- momentary Caps-release, esc, or a picker opening — a Caps TAP pops depth, not out.
-  local function onKey(press)
+  local function onKey(press, at)
     usedHold = true
-    town.talk("key", { at = "leader", press = press }, "past")
+    town.talk("key", { at = at or "leader", press = press }, "past")
   end
   for c in ("abfgnpqrstvwxyz0123456789/"):gmatch(".") do   -- hjkl + e/c + d/u + o/i + %/" + m handled below
     leader:bind({}, c, function() onKey(c) end)
@@ -136,17 +147,22 @@ function M.start(town, windows, warm)
   leader:bind({}, "d", scrollKey("d"))
   leader:bind({}, "u", scrollKey("u"))
 
-  -- Caps o/i walks the occupant at this depth. tmux decides whether its inner pane is
-  -- vim (buffers) or a shell (sessions); one rung out names sessions directly.
-  local function flip(press)
+  -- Caps o/i walks the occupant at this depth — always by recency, never by position. tmux decides
+  -- whether its inner pane is vim (buffers) or a shell (sessions); one rung out names sessions, and
+  -- inside Chrome the inner rung names tabs. All of them are trails in town; only the terminal is
+  -- handled here, because its walk is bytes into the pane rather than a word.
+  -- ⇧o/⇧i walk the OUTERMOST layer from wherever you are, exactly as ⇧hjkl move there: Shift means
+  -- outward on every key it touches, so holding it through Caps-then-o is one gesture, not two keys.
+  local function flip(press, atDepth)
     usedHold = true
-    local p = ladder.plan("flip", press, depth, DMAX, ctx())
+    local p = ladder.plan("flip", press, atDepth, DMAX, ctx())
     if p.act == "wez" then windows.wez(p.verb, p.dir)
-    elseif p.act == "chrome-cycle" then chrome.cycleTab(p.step)
-    else town.talk("key", { at = p.at, press = p.dir }, "past") end
+    else onKey(p.dir, p.at) end   -- every other surface walks its own trail, through town
   end
-  leader:bind({}, "o", function() flip("o") end)
-  leader:bind({}, "i", function() flip("i") end)
+  for _, press in ipairs({ "o", "i" }) do
+    leader:bind({}, press, function() flip(press, depth) end)          -- the current layer
+    leader:bind({ "shift" }, press, function() flip(press, DMAX) end)  -- ⇧: the outermost, same as ⇧hjkl
+  end
   leader:bind({ "shift" }, "return", function() onKey("S-return") end)
   leader:bind({ "shift" }, "t", function() onKey("T") end)   -- ⇧T → random theme
   leader:bind({ "shift" }, "/", function()   -- ? toggles the derived key card
@@ -169,7 +185,7 @@ function M.start(town, windows, warm)
         local f, c = e:getFlags(), hs.keycodes.map[e:getKeyCode()]
         local modekey   -- is this a town-mode key (falls through to the modal), or noise to swallow?
         if f.cmd or f.ctrl or f.alt or f.fn then modekey = false
-        elseif f.shift then modekey = (c == "h" or c == "j" or c == "k" or c == "l" or c == "return" or c == "/" or c == "t" or c == "f" or c == "5" or c == "'" or c == "c" or c == "e")   -- …5/' → % "; c/e = roll-arm a register with Shift held; f = reach
+        elseif f.shift then modekey = SHIFTED[c] or false
         else modekey = c ~= nil and (c:match("^%l$") or c:match("^%d$") or c == "/" or c == "return" or c == "escape") end
         if not modekey then return true end
       end

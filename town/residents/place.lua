@@ -4,6 +4,11 @@
 local function id(p)
   local id = (p.kind or "") .. ":" .. (p.app or p.name or "")
   if p.kind == "window" then return id .. ":" .. tostring(p.winId or p.title or "") end
+  -- a tab is identified by Chrome's own stable tab id; without one (a place logged before the
+  -- surface reported them) fall back to its window + position, as the menu's key does.
+  if p.kind == "tab" then
+    return id .. ":" .. tostring(p.tabId or (tostring(p.winId) .. ":" .. tostring(p.tabIndex)))
+  end
   return id
 end
 
@@ -21,8 +26,10 @@ return {
     local b = w.body or {}
     if w.tense == "future" then
       if tonumber(b.step) then
-        active = b.kind and kindTrail(b.kind) or all
-        return active.talk(w)
+        local selected = b.kind and kindTrail(b.kind) or all
+        local nextPlace = selected.talk(w)
+        if nextPlace then active = selected end
+        return nextPlace
       end
       return -- a named future place is for its surface to enter
     end
