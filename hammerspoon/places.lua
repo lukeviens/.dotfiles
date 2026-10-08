@@ -153,14 +153,20 @@ end
 -- The active tab is a place. It changes with no mac focus change, so report_front never sees it;
 -- a tab switch always retitles the window, so the title change is the signal. Deduped by tab id —
 -- a page that retitles itself (an unread count) fires the same event.
-local lastTab
+-- Debounced: the query is a ~100ms osascript and a loading page retitles several times. Collapse
+-- the burst, then ask once.
+local lastTab, tabTimer
 function M.report_tab()
   if not chrome.in_chrome() then return end
-  chrome.active(function(t)
-    if not t or t.tabId == lastTab then return end
-    if not chrome.in_chrome() then return end   -- focus moved on while the query was out
-    lastTab = t.tabId
-    town.talk("place", t)
+  if tabTimer then tabTimer:stop() end
+  tabTimer = hs.timer.doAfter(0.15, function()
+    if not chrome.in_chrome() then return end
+    chrome.active(function(t)
+      if not t or t.tabId == lastTab then return end
+      if not chrome.in_chrome() then return end   -- focus moved on while the query was out
+      lastTab = t.tabId
+      town.talk("place", t)
+    end)
   end)
 end
 
@@ -271,6 +277,7 @@ end
 function M.stop()   -- teardown + GC anchor (its upvalues keep winfilter + the pathwatchers alive)
   if winfilter then pcall(function() winfilter:unsubscribeAll() end) end
   if refreshTimer then refreshTimer:stop() end
+  if tabTimer then tabTimer:stop() end
   for _, pw in ipairs(watchers or {}) do pcall(function() pw:stop() end) end
 end
 

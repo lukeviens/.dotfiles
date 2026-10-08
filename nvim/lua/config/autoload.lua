@@ -97,6 +97,7 @@ vim.opt.expandtab = true
 vim.opt.clipboard:prepend({ "unnamed", "unnamedplus" })
 vim.opt.mouse = "a"
 vim.opt.timeoutlen = 300   -- a prefix waits this long for the rest; 1000 is felt
+vim.opt.updatetime = 250   -- CursorHold: git blame, LSP highlight. 4000 is why they look stuck
 
 -- wezterm-through-tmux sends plain Tab as the same byte as <C-i> — with no Normal-mode <Tab>
 -- map of its own, nvim falls through to <C-i>'s builtin (jump forward in the jumplist),
@@ -254,23 +255,18 @@ do
 	end
 	vim.api.nvim_create_autocmd("VimEnter", { callback = apply })  -- match the theme once loaded
 
-	-- town already watches the palette file centrally — join that instead of every nvim
-	-- instance re-watching the raw file itself. No libuv handle, no redundant reads across N panes.
-	local TOWN = vim.fn.expand("~/.config/town/target/release/town")
-	local function listen()
-		vim.fn.jobstart({ TOWN, "listen" }, {
-			on_stdout = function(_, lines)
-				for _, line in ipairs(lines or {}) do
-					if line ~= "" then
-						local ok, w = pcall(vim.json.decode, line)
-						if ok and w.kind == "theme" then apply() end
-					end
-				end
-			end,
-			on_exit = function() vim.defer_fn(listen, 1000) end,   -- town restarted — reconnect
-		})
-	end
-	listen()
+	-- Follow Caps-t the way the shells do (see .zshrc): register this pid, wait for SIGUSR1.
+	-- A `town listen` per nvim was a process per pane, each parsing every word town said to
+	-- notice the one `theme`.
+	local reg = vim.fn.expand("~/.cache/town/nvims")
+	vim.fn.mkdir(reg, "p")
+	local pidfile = reg .. "/" .. vim.fn.getpid()
+	vim.fn.writefile({}, pidfile)
+	local sig = vim.uv.new_signal()
+	sig:start("sigusr1", vim.schedule_wrap(apply))
+	vim.api.nvim_create_autocmd("VimLeavePre", {
+		callback = function() sig:stop(); vim.fn.delete(pidfile) end,   -- the closure also anchors `sig`
+	})
 end
 
 

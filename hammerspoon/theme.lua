@@ -22,11 +22,19 @@ function t.start(town, d)
     for k, v in pairs(w.body) do if t[k] ~= v then t[k] = v; changed = true end end
     if changed then
       d.hud.toast("theme ↻")
-      -- repaint any live interactive zsh prompts that registered themselves (see .zshrc): SIGUSR1
-      -- fires their TRAPUSR1, which re-reads the palette and redraws. Only a pid that IS a live zsh
-      -- (guards against PID reuse); any stale registration is removed in passing. Async.
-      d.sh('d="$HOME/.cache/town/shells"; [ -d "$d" ] || exit 0; for f in "$d"/*; do [ -e "$f" ] || continue; ' ..
-        'p=${f##*/}; case "$(ps -p "$p" -o comm= 2>/dev/null)" in *zsh) kill -USR1 "$p" 2>/dev/null;; *) rm -f "$f";; esac; done')
+      -- repaint every registered pid: zsh prompts (.zshrc) and nvim (config/autoload.lua). SIGUSR1
+      -- fires their handler; the comm check guards PID reuse and drops stale files in passing.
+      -- ONE ps for all pids — a ps per pid was 1.2s at 130 shells. Async.
+      d.sh([[for e in shells:zsh nvims:nvim; do
+  dir="$HOME/.cache/town/${e%%:*}"; want="${e##*:}"
+  [ -d "$dir" ] || continue
+  pids=""; for f in "$dir"/*; do [ -e "$f" ] || continue; pids="$pids ${f##*/}"; done
+  [ -n "$pids" ] || continue
+  live=$(ps -o pid=,comm= -p "$(echo ${pids# } | tr ' ' ',')" 2>/dev/null | awk -v w="$want" '$2 ~ w {printf "%s ", $1}')
+  for p in $pids; do
+    case " $live " in *" $p "*) kill -USR1 "$p" 2>/dev/null;; *) rm -f "$dir/$p";; esac
+  done
+done]])
     end
     d.picker.theme(w.body)   -- recolour the live picker webview (Caps f)
     -- macOS light/dark follows the palette's mode — only when it changes, so dark→black or
