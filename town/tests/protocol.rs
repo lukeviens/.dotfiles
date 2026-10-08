@@ -40,7 +40,7 @@ fn a_key_becomes_an_intention() {
     let tmux_i = say(&lua, &keys, json!({"kind":"key","body":{"at":"tmux","press":"i"}})).unwrap();
     assert_eq!(tmux_i, json!({"kind":"place","tense":"future","body":{"step":-1,"kind":"session"}}));
 
-    // and the same key inside Chrome walks its tabs — one more context, no new mechanism
+    // the same key inside Chrome walks its tabs
     let chrome_o = say(&lua, &keys, json!({"kind":"key","body":{"at":"chrome","press":"o"}})).unwrap();
     assert_eq!(chrome_o, json!({"kind":"place","tense":"future","body":{"step":1,"kind":"tab"}}));
 
@@ -158,11 +158,9 @@ fn window_and_session_flips_keep_independent_positions() {
     assert_eq!(say(&lua, &place, step("session", -1)).unwrap()["body"]["name"], "two");
 }
 
-// ── place: a tab is a place like any other. Chrome's tabs all live in ONE mac window, so they are
-// told apart by Chrome's own stable tab id — not by the app name (which would fold every tab into
-// a single place and make Caps o/i inside Chrome a no-op) and not by position (which renumbers the
-// moment a tab is closed or dragged). This is the whole reason o/i can mean ONE thing everywhere:
-// recency, resolved by town, for any surface that reports what it owns. ──
+// ── place: tabs share one mac window, so they are told apart by Chrome's id — not by app name
+// (every tab folds into one place and o/i does nothing) and not by position (renumbers on a close
+// or a drag). ──
 #[test]
 fn tabs_of_one_window_are_separate_places_and_walk_their_own_trail() {
     let (lua, place) = resident("place", json!({}), json!({}));

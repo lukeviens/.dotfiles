@@ -1,10 +1,8 @@
--- chrome.lua — Google Chrome as a place source. It owes town the same two things every surface
--- owes: REPORT the places it owns (its active tab, as a present `place`) and OBEY a future place
--- by name. Holding up both halves is what lets the tab trail work like every other trail — Caps
--- o/i inside Chrome walks recent tabs through town, with no branch of its own in the ladder.
+-- chrome.lua — Chrome as a place source: report the active tab, obey a future one. Both halves,
+-- so tabs ride the same trail as everything else and the tree needs no Chrome branch.
 --
--- A tab is named by Chrome's own `id`, which is stable across reordering and across windows;
--- `tabIndex` is only ever a position to set, never an identity.
+-- A tab is named by Chrome's `id` — stable across reordering and across windows. `tabIndex` is a
+-- position to set, never an identity.
 local sh = require("sh")
 local M = {}
 
@@ -39,8 +37,7 @@ function M.tabs(cb)
   end)
 end
 
--- the active tab of the front window, as a place (places.lua reports it, like it reports the
--- focused window and the attached tmux session). Empty when Chrome has no window open.
+-- the front window's active tab, as a place. Empty when Chrome has no window.
 local ACTIVE_AS = 'tell application "Google Chrome"\n' ..
   'if (count of windows) is 0 then return ""\n' ..
   'set w to front window\n' ..
@@ -59,12 +56,10 @@ function M.active(cb)
   end)
 end
 
--- enter a tab place. By tab id, so a tab that moved (reordered, or dragged to another window) is
--- still the same place; `onMissing` fires when no tab carries that id any more, which is how the
--- trail learns to drop it and walk on — exactly what places.lua does for a closed window.
--- (`as integer`, not a bare compare: Chrome hands `id` back as TEXT, so `id of t is 123` is a
--- text-to-integer test and is quietly false for every tab — which drains the trail instead of
--- walking it. A `whose id is …` filter coerces for you; a comparison inside a repeat does not.)
+-- enter a tab by id, so a tab that moved is still the same place. onMissing fires when no tab
+-- carries that id: the trail drops it and walks on, as places.lua does for a closed window.
+-- `as integer` — Chrome returns `id` as TEXT, so a bare `id of t is 123` is false for every tab.
+-- A `whose id is …` filter coerces; a comparison inside a repeat does not.
 local FIND_AS = 'tell application "Google Chrome"\n' ..
   'repeat with w in windows\n' ..
   'set i to 0\n' ..
@@ -81,7 +76,7 @@ local FIND_AS = 'tell application "Google Chrome"\n' ..
   'return ""\n' ..
   'end tell'
 
--- a place logged before tabs carried an id: the old window + position activation, best-effort.
+-- a place logged before tabs carried an id: window + position, best-effort.
 local AT_AS = 'tell application "Google Chrome"\n' ..
   'activate\n' ..
   'set index of (first window whose id is %d) to 1\n' ..

@@ -20,7 +20,7 @@ local DIR = {   -- per direction: tmux select flag · edge predicate · swap tar
 local ORDER = { "h", "j", "k", "l" }   -- deterministic, so the generated file is stable (golden-diffable)
 
 -- point/nav: defer to vim; else, at the pane edge, wrap to the pane at the opposite edge — depth 0
--- stays strictly tmux's; reaching the mac window is the depth ladder's job (mode.lua), not nav's.
+-- stays strictly tmux's; reaching the mac window is the containment tree's job (mode.lua), not nav's.
 local function nav(d)
   local x = DIR[d]
   local wrap = ("if -F '#{pane_at_%s}' { select-pane -t '{%s}' } { select-pane -%s }")

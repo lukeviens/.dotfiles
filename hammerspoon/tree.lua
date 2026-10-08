@@ -1,7 +1,14 @@
--- ladder.lua — the depth ladder's one decision: given an action, direction, depth, and which
--- surface is frontmost, what should happen and where. Pure (no hs.* calls) so it's the
--- single source of truth mode.lua executes against AND what town/tests/ladder.rs sweeps directly —
--- no separate doMotion/locate to keep in sync.
+-- tree.lua — one decision: action, direction, depth, frontmost surface → what happens, and where.
+--
+-- Places nest. A split is in a pane, in a session, in a mac window; a tab is in a mac window.
+-- depth is steps up from the leaf, and there are three ways through:
+--   point (hjkl)   among siblings
+--   flip  (o/i)    the same siblings, by recency
+--   depth (Caps)   one step up
+--
+-- Pure — no hs.* — so mode.lua executes it and town/tests/tree.rs sweeps it, nothing in between.
+--
+-- The branches below state the tree per surface. Give a place its parent and they derive.
 local M = {}
 
 local TABDIR = { h = "prev", k = "prev", j = "next", l = "next" }   -- point's middle rung: tmux windows
@@ -10,10 +17,8 @@ local STEP = { prev = -1, next = 1 }                                -- same read
 -- ctx = { inTerm, inVim, inChrome }. `verb` is the grabbed register for hjkl, or "flip"
 -- for o/i. `d` may be nil when only `where` is wanted (a badge repaint).
 --
--- flip (o/i) means ONE thing everywhere: walk the trail of places at this depth, most-recent
--- first. So the ladder only names WHICH context the key is reported as (`at`); the keymap says
--- which kind of place that context walks, and town's trail does the walking. A surface that
--- reports its places needs no branch here — that's the test of whether a new one slots in.
+-- flip names only the context (`at`); the keymap says which kind that context walks, and the
+-- trail walks it. A surface that reports its places needs no branch here.
 function M.plan(verb, d, atDepth, DMAX, ctx)
   if verb == "flip" then
     if ctx.inTerm and atDepth == 0 then

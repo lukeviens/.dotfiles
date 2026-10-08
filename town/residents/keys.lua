@@ -15,7 +15,7 @@ local m = {
   ["leader i"] = forward("window"),
   ["tmux o"]   = back("session"),    -- terminal middle depth: recent sessions
   ["tmux i"]   = forward("session"),
-  ["chrome o"] = back("tab"),        -- chrome inner depth: recent tabs
+  ["chrome o"] = back("tab"),        -- inside chrome: recent tabs
   ["chrome i"] = forward("tab"),
 
   -- ⌃⏎ zoom is the one direct chord left (mac max, or tmux zooms the pane in the terminal).
@@ -39,8 +39,7 @@ m["leader %"]  = surface("split")   -- % → split left/right
 m["leader \""] = surface("split")   -- " → split top/bottom
 m["leader m"]  = surface("menu bar")     -- opens it via AX; hjkl/return/esc drive it, all local
 m["leader F"]  = surface("click")        -- fuzzy-search & click any labeled on-screen element
--- Caps ⇧hjkl/⇧oi = the same motion at the outermost layer (Shift = outward) — HS owns the binding;
--- declared here so the card stays the whole doc. ⇧o/⇧i flip mac windows from wherever you are.
+-- Caps ⇧hjkl/⇧oi: the same motion at the outermost level. HS binds them; declared for the card.
 for _, key in ipairs({ "H", "J", "K", "L", "O", "I" }) do m["leader " .. key] = surface("outer") end
 -- Caps ⏎ zooms the inner thing (tmux pane in the terminal — HS routes that; else maximize ↔
 -- restore the mac window). Caps ⇧⏎ always goes straight to that same mac maximize, even from

@@ -96,6 +96,7 @@ vim.opt.shiftwidth = 4
 vim.opt.expandtab = true
 vim.opt.clipboard:prepend({ "unnamed", "unnamedplus" })
 vim.opt.mouse = "a"
+vim.opt.timeoutlen = 300   -- a prefix waits this long for the rest; 1000 is felt
 
 -- filetype-specific indentation
 local indent_overrides = {
@@ -145,9 +146,11 @@ vim.api.nvim_create_autocmd("VimEnter", {
 	end,
 })
 
-vim.keymap.set('n', '<leader>t', '<cmd>Neotree current reveal filesystem<CR>', { desc = "Neotree filesystem" })
-vim.keymap.set('n', '<leader>tt', '<cmd>Neotree current reveal buffers<CR>', { desc = "Neotree buffers" })
-vim.keymap.set('n', '<leader>ttt', '<cmd>Neotree current reveal git_status<CR>', { desc = "Neotree git status" })
+-- all three are leaves. <leader>t used to be a leaf AND the prefix of tt/ttt, so it waited out
+-- timeoutlen on every press before opening.
+vim.keymap.set('n', '<leader>t', '<cmd>Neotree current reveal filesystem<CR>', { desc = "Tree: filesystem" })
+vim.keymap.set('n', '<leader>b', '<cmd>Neotree current reveal buffers<CR>', { desc = "Tree: buffers" })
+vim.keymap.set('n', '<leader>g', '<cmd>Neotree current reveal git_status<CR>', { desc = "Tree: git status" })
 
 
 --

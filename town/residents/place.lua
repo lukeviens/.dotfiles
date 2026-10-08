@@ -4,8 +4,8 @@
 local function id(p)
   local id = (p.kind or "") .. ":" .. (p.app or p.name or "")
   if p.kind == "window" then return id .. ":" .. tostring(p.winId or p.title or "") end
-  -- a tab is identified by Chrome's own stable tab id; without one (a place logged before the
-  -- surface reported them) fall back to its window + position, as the menu's key does.
+  -- a tab is its Chrome id; one logged before the surface reported tabs has none, so fall back
+  -- to window + position, as the menu's key does.
   if p.kind == "tab" then
     return id .. ":" .. tostring(p.tabId or (tostring(p.winId) .. ":" .. tostring(p.tabIndex)))
   end

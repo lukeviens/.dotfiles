@@ -1,5 +1,5 @@
--- mode.lua — town-mode: a modal editor for the tiled desktop. Caps (→ F18) taps through DEPTH
--- (inner pane → mac window); a HOLD is momentary. Keys are swallowed exclusively while open. hjkl
+-- mode.lua — town-mode: a modal editor for the tiled desktop. Caps (→ F18) taps up the tree
+-- (pane → mac window); a HOLD is momentary. Keys are swallowed exclusively while open. hjkl
 -- moves the current register (point/edge/cell) at the current depth. See town-motion-model.
 local M = {}
 
@@ -14,16 +14,15 @@ local townmodetap                    -- the exclusive-mode eventtap (held; M.sto
 -- it the current register/depth and the hint items, and it renders.
 local hud = require("hud")
 local time = require("time")         -- the ? card's second page: town's pace as a table
-local chrome = require("chrome")   -- Chrome's depth-0 rung for hjkl: spatial tab cycling (see ladder.plan)
-local ladder = require("ladder")   -- the one decision: action+depth+surface → what a key does
+local chrome = require("chrome")   -- Chrome's innermost rung for hjkl: spatial tab cycling (see tree.plan)
+local tree = require("tree")       -- the one decision: action+depth+surface → what a key does
 local menunav = require("menunav")   -- drives an open mac menu (leader m) purely via AX, no keys
 local reach = require("reach")       -- search-and-click any labeled on-screen element (leader ⇧F)
 
--- the keys that mean something with Shift held, so the exclusive tap lets them through to the modal
--- instead of swallowing them. Everything here has a `leader:bind({ "shift" }, …)` below; anything
--- that doesn't would be eaten silently, which is how ⇧o/⇧i went nowhere.
---   hjkl/oi → the same motion at the outermost layer · 5 ' → % " · c e → roll-arm a register
---   return → mac maximize · t → random theme · / → the ? card · f → reach
+-- Shift-held keys the exclusive tap must pass to the modal. Every entry needs a matching
+-- leader:bind({ "shift" }, …) below; one without it is swallowed silently.
+--   hjkl oi → the outermost level · 5 ' → % " · c e → arm a register
+--   return → maximize · t → random theme · / → the card · f → reach
 local SHIFTED = {}
 for k in ("hjkl oi 5 ' c e t f /"):gmatch("%S+") do
   for ch in k:gmatch(".") do SHIFTED[ch] = true end
@@ -42,12 +41,12 @@ function M.start(town, windows, warm)
   local inMenu = false
   local inTerm = windows.in_term   -- "am I in the terminal?" — decided in windows (it owns the transport)
   local inVim = windows.in_vim     -- "is that pane running vim?" — also windows' (it owns the transport)
-  local MAC = { edge = windows.resize, cell = windows.snap }   -- ladder.plan's "mac" act, by register
+  local MAC = { edge = windows.resize, cell = windows.snap }   -- tree.plan's "mac" act, by register
   local function ctx() return { inTerm = inTerm(), inVim = inVim(), inChrome = chrome.in_chrome() } end
 
-  -- where hjkl would currently land, for the badge — ladder.plan with no direction, just the label.
+  -- where hjkl would currently land, for the badge — tree.plan with no direction, just the label.
   local function locate(atDepth)
-    local p = ladder.plan(register, nil, atDepth, DMAX, ctx())
+    local p = tree.plan(register, nil, atDepth, DMAX, ctx())
     return p and p.where
   end
 
@@ -108,11 +107,11 @@ function M.start(town, windows, warm)
   leader:bind({ "shift" }, "e", arm("edge"))   -- Shift is meaningless on an arm key, so ⇧e = e:
   leader:bind({ "shift" }, "c", arm("cell"))   -- you can roll Caps+⇧+c+hjkl for e.g. cell-out in one motion
 
-  -- hjkl moves the grabbed element; ladder.plan decides what that means at this depth/surface.
+  -- hjkl moves the grabbed element; tree.plan decides what that means at this depth/surface.
   local MENUNAV = { h = menunav.left, j = menunav.down, k = menunav.up, l = menunav.right }
   local function doMotion(d, atDepth)
     if inMenu then MENUNAV[d](); return end
-    local p = ladder.plan(register, d, atDepth, DMAX, ctx())
+    local p = tree.plan(register, d, atDepth, DMAX, ctx())
     if not p then return end
     if p.act == "wez" then windows.wez(p.verb, p.dir)
     elseif p.act == "chrome-cycle" then chrome.cycleTab(p.step)
@@ -147,21 +146,18 @@ function M.start(town, windows, warm)
   leader:bind({}, "d", scrollKey("d"))
   leader:bind({}, "u", scrollKey("u"))
 
-  -- Caps o/i walks the occupant at this depth — always by recency, never by position. tmux decides
-  -- whether its inner pane is vim (buffers) or a shell (sessions); one rung out names sessions, and
-  -- inside Chrome the inner rung names tabs. All of them are trails in town; only the terminal is
-  -- handled here, because its walk is bytes into the pane rather than a word.
-  -- ⇧o/⇧i walk the OUTERMOST layer from wherever you are, exactly as ⇧hjkl move there: Shift means
-  -- outward on every key it touches, so holding it through Caps-then-o is one gesture, not two keys.
+  -- Caps o/i walks this level by recency. tmux's pane is vim (buffers) or a shell (sessions); one
+  -- up is sessions; in Chrome it's tabs. All trails in town — only the terminal is handled here,
+  -- since its walk is bytes into the pane, not a word. ⇧ goes outermost, as it does for hjkl.
   local function flip(press, atDepth)
     usedHold = true
-    local p = ladder.plan("flip", press, atDepth, DMAX, ctx())
+    local p = tree.plan("flip", press, atDepth, DMAX, ctx())
     if p.act == "wez" then windows.wez(p.verb, p.dir)
-    else onKey(p.dir, p.at) end   -- every other surface walks its own trail, through town
+    else onKey(p.dir, p.at) end   -- every other surface walks its trail through town
   end
   for _, press in ipairs({ "o", "i" }) do
-    leader:bind({}, press, function() flip(press, depth) end)          -- the current layer
-    leader:bind({ "shift" }, press, function() flip(press, DMAX) end)  -- ⇧: the outermost, same as ⇧hjkl
+    leader:bind({}, press, function() flip(press, depth) end)
+    leader:bind({ "shift" }, press, function() flip(press, DMAX) end)
   end
   leader:bind({ "shift" }, "return", function() onKey("S-return") end)
   leader:bind({ "shift" }, "t", function() onKey("T") end)   -- ⇧T → random theme

@@ -48,7 +48,7 @@ return {
 		},
 		opts = {
 			enable_git_status = true,
-			enable_diagnostics = true,
+			enable_diagnostics = false,   -- re-walks the tree per diagnostic; the gutter already says it
 			event_handlers = {
 				{ event = "state_created", handler = restore_cwd },
 				{ event = "neo_tree_window_before_open", handler = restore_cwd },

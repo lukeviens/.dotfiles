@@ -140,15 +140,13 @@ function M.report_front()
       if s then town.talk("place", { kind = "session", name = s }) end
     end)
   elseif name == "Google Chrome" then
-    M.report_tab()   -- the window place, then the tab inside it — both rungs have somewhere to return to
+    M.report_tab()   -- the window, then the tab inside it
   end
 end
 
--- Chrome's active tab is a place of its own — the depth-0 rung inside Chrome, the way a tmux
--- session is the middle rung inside the terminal. It changes with NO mac window focus change, so
--- report_front never sees it; a tab switch always retitles the window, so the window filter's
--- title change is the signal. Deduped by tab id, because a page that retitles itself (an unread
--- count ticking) fires the same event and must not write a place every time.
+-- The active tab is a place. It changes with no mac focus change, so report_front never sees it;
+-- a tab switch always retitles the window, so the title change is the signal. Deduped by tab id —
+-- a page that retitles itself (an unread count) fires the same event.
 local lastTab
 function M.report_tab()
   if not chrome.in_chrome() then return end
@@ -185,7 +183,7 @@ function M.start(bus)
   winfilter:subscribe({ hs.window.filter.windowCreated, hs.window.filter.windowDestroyed },
     function() win_cache = nil end)
   winfilter:subscribe(hs.window.filter.windowFocused, function() M.report_front() end)
-  -- a Chrome tab switch moves no mac window, and shows up only as a retitle
+  -- a tab switch moves no mac window; it shows up only as a retitle
   winfilter:subscribe(hs.window.filter.windowTitleChanged, function() M.report_tab() end)
 
   -- town owns the menus; the surface says what exists when asked.
@@ -227,7 +225,7 @@ function M.start(bus)
     local p = w.body
     if w.tense ~= "future" then return end
     if p.kind == "tab" then
-      chrome.activate(p, function() town.talk("place", p, "past") end)   -- gone → drop it, keep walking
+      chrome.activate(p, function() town.talk("place", p, "past") end)   -- gone → drop it, walk on
       return
     end
     if not (p.kind == "window" or p.kind == "app") then return end
