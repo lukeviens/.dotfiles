@@ -138,7 +138,16 @@ pub fn resident(name: &str, present: Value, past: Value) -> (Lua, Table) {
 
     let lib = std::fs::read_to_string(format!("{ROOT}/lib.lua")).unwrap();
     lua.load(&lib).set_name("lib").exec().unwrap();
-    let src = std::fs::read_to_string(format!("{ROOT}/residents/{name}.lua")).unwrap();
+    // residents talk as well as answer; `talked` reads back what they said
+    lua.load("TALKED = {}").exec().unwrap();
+    lua.globals()
+        .set("talk", lua.create_function(|lua, w: LuaValue| {
+            let t: Table = lua.globals().get("TALKED")?;
+            t.raw_push(w)?;
+            Ok(())
+        }).unwrap())
+        .unwrap();
+    let src = std::fs::read_to_string(find(name)).unwrap();
     let spec: Table = lua.load(&src).set_name(name).eval().unwrap();
     (lua, spec)
 }
@@ -147,7 +156,10 @@ pub fn resident(name: &str, present: Value, past: Value) -> (Lua, Table) {
 /// exactly as the engine would read it), or None.
 pub fn say(lua: &Lua, spec: &Table, word: Value) -> Option<Value> {
     let talk: mlua::Function = spec.get("talk").unwrap();
-    let res: LuaValue = talk.call(lua.to_value(&word).unwrap()).unwrap();
+    let opts = mlua::SerializeOptions::new()   // as the engine hands it over: null is nil
+        .serialize_none_to_null(false)
+        .serialize_unit_to_null(false);
+    let res: LuaValue = talk.call(lua.to_value_with(&word, opts).unwrap()).unwrap();
     match res {
         LuaValue::Nil => None,
         v => {
@@ -188,15 +200,26 @@ pub fn replay(words: &[Value]) -> Value {
         .unwrap();
     lua.globals().set("reopen", lua.create_function(|_, ()| Ok(())).unwrap()).unwrap();
 
+    // residents talk as well as answer; a return is just talking once, so both land here
+    let said: Rc<RefCell<Vec<Value>>> = Rc::new(RefCell::new(Vec::new()));
+    let s = said.clone();
+    lua.globals()
+        .set("talk", lua.create_function(move |lua, w: LuaValue| {
+            let out: Value = lua.from_value(w)?;
+            s.borrow_mut().push(json!({
+                "kind": out["kind"],
+                "tense": out.get("tense").cloned().unwrap_or(json!("present")),
+                "body": out.get("body").cloned().unwrap_or(Value::Null),
+            }));
+            Ok(())
+        }).unwrap())
+        .unwrap();
+
     lua.load(&std::fs::read_to_string(format!("{ROOT}/lib.lua")).unwrap()).set_name("lib").exec().unwrap();
 
     // load every resident, indexed by the kinds it listens for
     let mut listeners: Vec<(HashSet<String>, Function)> = Vec::new();
-    let mut files: Vec<_> = std::fs::read_dir(format!("{ROOT}/residents"))
-        .unwrap()
-        .filter_map(|e| e.ok().map(|e| e.path()))
-        .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("lua"))
-        .collect();
+    let mut files = residents();
     files.sort();
     for path in files {
         let src = std::fs::read_to_string(&path).unwrap();
@@ -210,8 +233,8 @@ pub fn replay(words: &[Value]) -> Value {
         }
     }
     lua.load("EFFECTS = {}").exec().unwrap(); // drop load-time self-heal effects (theme/k9s)
+    said.borrow_mut().clear(); // …and load-time talk (transport sourcing its binds)
 
-    let mut talkbacks: Vec<Value> = Vec::new();
     for w in words {
         let kind = w["kind"].as_str().unwrap_or("").to_string();
         let tense = w.get("tense").and_then(Value::as_str).unwrap_or("present");
@@ -223,9 +246,9 @@ pub fn replay(words: &[Value]) -> Value {
             if kinds.contains(&kind) || kinds.contains("*") {
                 let heard = lua.to_value(w).unwrap();
                 match talk.call::<LuaValue>(heard) {
-                    Ok(said) if !said.is_nil() => {
-                        let out: Value = lua.from_value(said).unwrap();
-                        talkbacks.push(json!({
+                    Ok(back) if !back.is_nil() => {
+                        let out: Value = lua.from_value(back).unwrap();
+                        said.borrow_mut().push(json!({
                             "kind": out["kind"],
                             "tense": out.get("tense").cloned().unwrap_or(json!("present")),
                             "body": out.get("body").cloned().unwrap_or(Value::Null),
@@ -238,7 +261,43 @@ pub fn replay(words: &[Value]) -> Value {
         }
     }
 
+    let talkbacks = Value::Array(said.borrow().clone());
     json!({ "present": Value::Object(present.borrow().clone()), "talkbacks": talkbacks, "effects": effects(&lua) })
+}
+
+/// Every resident, however deep — a translator lives in residents/translators/ and is one too.
+pub fn residents() -> Vec<std::path::PathBuf> {
+    fn walk(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+        for e in std::fs::read_dir(dir).into_iter().flatten().flatten() {
+            let p = e.path();
+            if e.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                walk(&p, out);
+            } else if p.extension().and_then(|s| s.to_str()) == Some("lua") {
+                out.push(p);
+            }
+        }
+    }
+    let mut out = Vec::new();
+    walk(std::path::Path::new(&format!("{ROOT}/residents")), &mut out);
+    out
+}
+
+/// A resident by name, wherever it lives.
+pub fn find(name: &str) -> std::path::PathBuf {
+    residents()
+        .into_iter()
+        .find(|p| p.file_stem().and_then(|s| s.to_str()) == Some(name))
+        .unwrap_or_else(|| panic!("no resident named {name}"))
+}
+
+/// The words a resident talked rather than returned, in order.
+#[allow(dead_code)]
+pub fn talked(lua: &Lua) -> Vec<Value> {
+    let t: Table = lua.globals().get("TALKED").unwrap();
+    t.sequence_values::<LuaValue>()
+        .filter_map(Result::ok)
+        .map(|v| lua.from_value(v).unwrap())
+        .collect()
 }
 
 /// The side effects a resident performed, in order — `{kind:"exec"|"write", ...}`.

@@ -8,3 +8,4 @@ pub mod residents;
 pub mod square;
 pub mod paths;
 pub mod scrub;
+pub mod work;

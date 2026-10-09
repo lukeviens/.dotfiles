@@ -130,6 +130,13 @@ vim.keymap.set('n', '<leader>fg', function() require('telescope.builtin').live_g
 vim.keymap.set('n', '<leader>fb', function() require('telescope.builtin').buffers() end, { desc = "Buffers" })
 vim.keymap.set('n', '<leader>fh', function() require('telescope.builtin').help_tags() end, { desc = "Help tags" })
 
+-- town's `grep` intention, obeyed by the nvim town calls focused — every instance hears it.
+require("config.town").listen("grep", function(w)
+	if w.tense == "future" and require("config.town").mine() then
+		vim.schedule(function() require("telescope.builtin").live_grep() end)
+	end
+end)
+
 
 --
 -- NEOTREE
@@ -255,18 +262,8 @@ do
 	end
 	vim.api.nvim_create_autocmd("VimEnter", { callback = apply })  -- match the theme once loaded
 
-	-- Follow Caps-t the way the shells do (see .zshrc): register this pid, wait for SIGUSR1.
-	-- A `town listen` per nvim was a process per pane, each parsing every word town said to
-	-- notice the one `theme`.
-	local reg = vim.fn.expand("~/.cache/town/nvims")
-	vim.fn.mkdir(reg, "p")
-	local pidfile = reg .. "/" .. vim.fn.getpid()
-	vim.fn.writefile({}, pidfile)
-	local sig = vim.uv.new_signal()
-	sig:start("sigusr1", vim.schedule_wrap(apply))
-	vim.api.nvim_create_autocmd("VimLeavePre", {
-		callback = function() sig:stop(); vim.fn.delete(pidfile) end,   -- the closure also anchors `sig`
-	})
+	-- the palette arrives on the socket like any other word: no signal, no pid registry
+	require("config.town").listen("theme", vim.schedule_wrap(apply))
 end
 
 

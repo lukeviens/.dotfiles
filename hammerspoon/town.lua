@@ -10,6 +10,11 @@ local SQUARE = HOME .. "/.cache/town/square.sock"
 local sq                                 -- the live socket, or nil while (re)connecting
 local townlink                           -- the reconnect heartbeat (held here so HS can't GC it)
 local lastRx = 0                         -- when we last heard ANY bytes — our proof of life
+local now = {}                           -- kind → its latest present body
+
+-- the present, as this surface last heard it. a join is greeted with all of it, so it is filled
+-- before the first word arrives.
+function M.present(kind) return now[kind] end
 
 function M.listen(kind, fn)
   M.on[kind] = M.on[kind] or {}
@@ -18,6 +23,7 @@ end
 
 local function dispatch(line)            -- one incoming word → its listeners, by kind
   local ok, w = pcall(hs.json.decode, line)
+  if ok and w and w.kind and (w.tense or "present") == "present" then now[w.kind] = w.body end
   if ok and w and w.kind and M.on[w.kind] then
     for _, fn in ipairs(M.on[w.kind]) do   -- one bad listener must not take the bus down with it
       local ok, err = pcall(fn, w)

@@ -37,6 +37,17 @@ end
 -- this runtime. (The Hammerspoon surface keeps its own copy; it's a separate process.)
 bins = { tmux = "/opt/homebrew/bin/tmux", nvim = "/opt/homebrew/bin/nvim" }
 
+-- work: a command run outside town, without blocking it. It comes back as a past `work` carrying
+-- `code`, `out`, `ms`, and whatever fields were sent with it — match on those with `on`'s `by`.
+function work(cmd, body)
+  local b = body or {}
+  b.cmd = cmd
+  local i = debug and debug.getinfo(2, "Sl")   -- absent under the test sandbox
+  local src = i and (i.short_src:match('%[string "(.-)"%]') or i.short_src:match("([^/]+)$") or i.short_src)
+  b.where = src and (src .. ":" .. i.currentline) or "?"
+  return intent("work", b)
+end
+
 function pick(what)    return intent("menu", { what = what }, what) end   -- the menu should show `what`
 -- a place named relatively: `step` along the trail of one kind (or all, when kind is nil) —
 -- back is +1, forward −1; `slot` a favourite. The trail / favourites resolve it to a place by

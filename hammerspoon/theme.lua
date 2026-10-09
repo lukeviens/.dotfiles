@@ -22,10 +22,10 @@ function t.start(town, d)
     for k, v in pairs(w.body) do if t[k] ~= v then t[k] = v; changed = true end end
     if changed then
       d.hud.toast("theme ↻")
-      -- repaint every registered pid: zsh prompts (.zshrc) and nvim (config/autoload.lua). SIGUSR1
-      -- fires their handler; the comm check guards PID reuse and drops stale files in passing.
-      -- ONE ps for all pids — a ps per pid was 1.2s at 130 shells. Async.
-      d.sh([[for e in shells:zsh nvims:nvim; do
+      -- repaint every registered zsh prompt (.zshrc). nvim is on the square and hears the palette
+      -- there. The comm check guards PID reuse and drops stale files; one ps for all pids, because
+      -- per-pid was 1.2s at 130 shells.
+      d.sh([[for e in shells:zsh; do
   dir="$HOME/.cache/town/${e%%:*}"; want="${e##*:}"
   [ -d "$dir" ] || continue
   pids=""; for f in "$dir"/*; do [ -e "$f" ] || continue; pids="$pids ${f##*/}"; done

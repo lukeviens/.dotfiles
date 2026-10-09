@@ -42,6 +42,9 @@ function M.start(town, windows, warm)
   local inTerm = windows.in_term   -- "am I in the terminal?" — decided in windows (it owns the transport)
   local inVim = windows.in_vim     -- "is that pane running vim?" — also windows' (it owns the transport)
   local MAC = { edge = windows.resize, cell = windows.snap }   -- tree.plan's "mac" act, by register
+  -- a motion the terminal owns. town says it to tmux over the connection it holds; HS no longer
+  -- synthesizes a keystroke for tmux to match.
+  local function transport(verb, dir) town.talk("transport", { verb = verb, dir = dir }, "future") end
   local function ctx() return { inTerm = inTerm(), inVim = inVim(), inChrome = chrome.in_chrome() } end
 
   -- where hjkl would currently land, for the badge — tree.plan with no direction, just the label.
@@ -87,7 +90,7 @@ function M.start(town, windows, warm)
   leader:bind({}, "return", function()
     usedHold = true
     if inMenu then menunav.select(); inMenu = false; hud.badge(register, locate(depth))
-    elseif inTerm() and depth == 0 then windows.wez("zoom", "z")  -- inner: zoom the pane
+    elseif inTerm() and depth == 0 then transport("zoom", "z")  -- inner: zoom the pane
     elseif inTerm() and depth == 1 then M.leave(); windows.fullscreen()  -- middle: leave first, or our
     -- own exclusive tap (still swallowing while modeOn) eats the synthetic ⌘⏎ before WezTerm sees it
     else onKey("return") end                                       -- outer, or no terminal: mac maximize
@@ -113,7 +116,7 @@ function M.start(town, windows, warm)
     if inMenu then MENUNAV[d](); return end
     local p = tree.plan(register, d, atDepth, DMAX, ctx())
     if not p then return end
-    if p.act == "wez" then windows.wez(p.verb, p.dir)
+    if p.act == "wez" then transport(p.verb, p.dir)
     elseif p.act == "chrome-cycle" then chrome.cycleTab(p.step)
     elseif p.act == "mac" then MAC[p.reg](p.dir)
     elseif p.act == "onkey" then onKey(p.dir) end
@@ -129,7 +132,7 @@ function M.start(town, windows, warm)
   local function split(dir)   -- % = lr, " = tb
     return function()
       usedHold = true
-      if depth == 0 and inTerm() then windows.wez("split", dir) end  -- inner only (mac split later)
+      if depth == 0 and inTerm() then transport("split", dir) end  -- inner only (mac split later)
     end
   end
   leader:bind({ "shift" }, "5", split("lr"))   -- % → split left/right
@@ -140,7 +143,7 @@ function M.start(town, windows, warm)
   local function scrollKey(dir)
     return function()
       usedHold = true
-      if inTerm() then windows.wez("scroll", dir) else windows.scroll(dir) end
+      if inTerm() then transport("scroll", dir) else windows.scroll(dir) end
     end
   end
   leader:bind({}, "d", scrollKey("d"))
@@ -152,7 +155,7 @@ function M.start(town, windows, warm)
   local function flip(press, atDepth)
     usedHold = true
     local p = tree.plan("flip", press, atDepth, DMAX, ctx())
-    if p.act == "wez" then windows.wez(p.verb, p.dir)
+    if p.act == "wez" then transport(p.verb, p.dir)
     else onKey(p.dir, p.at) end   -- every other surface walks its trail through town
   end
   for _, press in ipairs({ "o", "i" }) do

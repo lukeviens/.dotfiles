@@ -1,11 +1,12 @@
 -- windows.lua — mac window management: directional focus, grow/shrink (edge), snap-to-half (cell),
--- maximize↔restore, the transport byte-injection (wez), and binding town's one keymap chord (⌃⏎,
--- dimmed inside the terminal). Windows float and are managed here in HS; town routes `move` (Caps
--- hjkl's outermost rung) and `arrange`; `vim` tells the chords when the terminal owns the key.
+-- maximize↔restore, and binding town's one keymap chord (⌃⏎, dimmed inside the terminal). Windows
+-- float and are managed here in HS; town routes `move` (Caps hjkl's outermost rung) and `arrange`;
+-- `vim` tells the chords when the terminal owns the key. Motions inside the terminal are not HS's
+-- any more — town says them to tmux over the connection it holds.
 local M = {}
-local sh = require("sh")
 
 local HOME = os.getenv("HOME")
+local town                -- set in M.start
 
 -- is the terminal frontmost? the one place "which terminal am I" is decided (mode + the app-watcher
 -- both ask here). windows owns it because it owns the terminal transport.
@@ -25,49 +26,6 @@ local function focus(dir)
   if w and DIRS[dir] then w["focusWindow" .. DIRS[dir]](w, nil, true, true) end
 end
 
--- Nudge the FOCUSED WezTerm pane to move: send the exact bytes a physical ⌥dir would — ESC+dir,
--- i.e. Meta-dir — which tmux's `bind -n M-…` matches. (WezTerm consumes the ⌥ modifier itself and
--- only ever forwards these bytes, so there's no real keystroke to synthesize; a posted CGEvent
--- WezTerm ignores, but the bytes it can't tell from a real press.) This routes nvim splits and
--- tmux panes both through the one tmux path. Async so it never blocks HS.
-local WEZ = "/opt/homebrew/bin/wezterm"
-local WEZ_SOCK = HOME .. "/.local/share/wezterm/default-org.wezfurlong.wezterm"  -- stable → live gui-sock
-local function send_bytes(seq)   -- inject a raw escape sequence into the focused WezTerm pane
-  local pane = WEZ .. " cli list-clients --format json"
-    .. " | sed -n 's/.*\"focused_pane_id\":[[:space:]]*\\([0-9]*\\).*/\\1/p' | head -1"
-  local cmd = "p=$(" .. pane .. "); [ -n \"$p\" ] && printf '" .. seq .. "' | "
-    .. WEZ .. " cli send-text --no-paste --pane-id \"$p\""
-  sh(cmd, nil, { WEZTERM_UNIX_SOCKET = WEZ_SOCK })
-end
-
--- the transport manifest town generates (residents/transport.lua): (verb dir) → the tmux key HS
--- must inject. ONE source — so the byte here and the tmux bind can never drift. See town-motion-model.
-local T = {}
-do
-  local f = io.open(HOME .. "/.cache/town/transport", "r")
-  if f then
-    for line in f:lines() do
-      local verb, dir, key = line:match("^(%S+)%s+(%S+)%s+(%S+)$")
-      if verb then T[verb] = T[verb] or {}; T[verb][dir] = key end
-    end
-    f:close()
-  end
-end
-
--- a tmux key name (M-… / M-C-… / M-%) → the printf octal bytes to inject: ESC for Meta, then the
--- base char (a C-x control byte, else the literal char) as \NNN octal so printf never meets a %.
-local function keyBytes(key)
-  local body = key:gsub("^M%-", "")
-  local ctrl = body:match("^C%-(.)$")
-  local b = ctrl and (ctrl:lower():byte() - 96) or body:byte()
-  return ("\\033\\%03o"):format(b)
-end
-
--- the ONE entry point mode.lua drives: inject the transport key for (verb, dir) into the terminal.
-function M.wez(verb, dir)
-  local key = T[verb] and T[verb][dir]
-  if key then send_bytes(keyBytes(key)) end
-end
 -- the middle rung, in a terminal: WezTerm's own fullscreen (edge-to-edge, no macOS Space, no
 -- animation) — distinct from maximize(), and faster than the OS-level AXFullScreen toggle since
 -- it skips the Spaces transition entirely. A real synthetic keystroke, not a byte injection: the
@@ -147,7 +105,8 @@ function M.nav_mode()   -- exposed: the surface's app-watcher calls it the insta
   for _, hk in ipairs(townnav) do if inside then hk:disable() else hk:enable() end end
 end
 
-function M.start(town)
+function M.start(bus)
+  town = bus
   town.listen("move", function(w) focus(w.body.dir) end)
   town.listen("vim", function(w) vimActive = (w.body.active == "1") end)
 

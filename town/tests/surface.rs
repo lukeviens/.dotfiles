@@ -46,34 +46,3 @@ fn the_tmux_surface_names_a_real_town_binary() {
         "tmux.conf neither source-files the transport nor uses $TOWN; the surface↔town contract drifted"
     );
 }
-
-// The transport is generated into TWO artifacts from one table (residents/transport.lua): the tmux
-// binds tmux source-files, and the key manifest HS reads. They must name the SAME keys — that's the
-// whole point (the byte HS injects == the key tmux binds). Guard that they never diverge.
-#[test]
-fn the_transport_manifest_and_tmux_binds_name_the_same_keys() {
-    let home = std::env::var("HOME").unwrap();
-    let manifest = Path::new(&home).join(".cache/town/transport");
-    let binds = Path::new(&home).join(".config/tmux/town-transport.conf");
-    if !manifest.exists() || !binds.exists() {
-        return; // town hasn't generated them yet → nothing to guard
-    }
-
-    // keys HS injects: the 3rd column of each `verb dir key` manifest row.
-    let mut hs: Vec<String> = std::fs::read_to_string(&manifest)
-        .unwrap()
-        .lines()
-        .filter_map(|l| l.split_whitespace().nth(2).map(str::to_string))
-        .collect();
-    // keys tmux binds: `bind -n <key> …`, unquoted.
-    let mut tmux: Vec<String> = std::fs::read_to_string(&binds)
-        .unwrap()
-        .lines()
-        .filter_map(|l| l.strip_prefix("bind -n "))
-        .filter_map(|r| r.split_whitespace().next())
-        .map(|k| k.trim_matches('\'').to_string())
-        .collect();
-    hs.sort();
-    tmux.sort();
-    assert_eq!(hs, tmux, "HS transport manifest and tmux binds diverged — regenerate transport.lua");
-}

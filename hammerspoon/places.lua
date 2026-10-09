@@ -114,7 +114,6 @@ end
 -- HS reports the focused mac window as a present place, including its stable window id so
 -- two windows of one app remain separate. In the terminal it also reports the current tmux
 -- session; the outer window and middle session rungs then both have a place to return to.
-local TX = "/opt/homebrew/bin/tmux"
 local lastFocus
 local town   -- set in M.start; report_front is also called by the surface's app-watcher
 function M.report_front()
@@ -134,18 +133,9 @@ function M.report_front()
   local place = { kind = "window", app = name }
   if win then place.winId, place.title = win:id(), win:title() end
   town.talk("place", place)
-  if name == "WezTerm" then
-    -- the attached client's session — NOT `display-message` (which answers for tmux's
-    -- most-recently-active client, i.e. the wrong window). Queried ASYNC via hs.task: a blocking
-    -- hs.execute here spawned a process on the UI thread on EVERY terminal focus — the exact
-    -- per-event stall the persistent bus exists to prevent. Talk the place from the callback.
-    sh(TX .. " list-clients -F '#{client_session}' 2>/dev/null", function(_, out)
-      local front = hs.application.frontmostApplication()
-      if not front or front:pid() ~= app:pid() or lastFocus ~= focus then return end
-      local s = out and out:match("[^\r\n]+")
-      if s then town.talk("place", { kind = "session", name = s }) end
-    end)
-  elseif name == "Google Chrome" then
+  -- which tmux session you are on is not HS's to ask: town is joined to tmux and tmux says so
+  -- the moment it changes (residents/translators/tmux.lua).
+  if name == "Google Chrome" then
     M.report_tab()   -- the window, then the tab inside it
   end
 end
@@ -153,8 +143,7 @@ end
 -- The active tab is a place. It changes with no mac focus change, so report_front never sees it;
 -- a tab switch always retitles the window, so the title change is the signal. Deduped by tab id —
 -- a page that retitles itself (an unread count) fires the same event.
--- Debounced: the query is a ~100ms osascript and a loading page retitles several times. Collapse
--- the burst, then ask once.
+-- Debounced: the query is a ~100ms osascript and a loading page retitles several times.
 local lastTab, tabTimer
 function M.report_tab()
   if not chrome.in_chrome() then return end
@@ -170,13 +159,13 @@ function M.report_tab()
   end)
 end
 
--- tmux sessions, async (never a UI-thread spawn) — the terminal half of the picker's live list.
-local function session_places(cb)
-  sh(TX .. " list-sessions -F '#{session_name}' 2>/dev/null", function(_, out)
-    local places = {}
-    for name in (out or ""):gmatch("[^\r\n]+") do places[#places + 1] = { kind = "session", name = name } end
-    cb(places)
-  end)
+-- the terminal half of the picker's list. town is joined to tmux and says which sessions exist,
+-- so the surface reads the present instead of asking.
+local function session_places()
+  local s = town.present("sessions")
+  local places = {}
+  for _, name in ipairs(s and s.names or {}) do places[#places + 1] = { kind = "session", name = name } end
+  return places
 end
 
 function M.start(bus)
@@ -209,20 +198,18 @@ function M.start(bus)
   local function refresh()
     local all = window_places()
     for _, p in ipairs(app_places()) do all[#all + 1] = p end
-    session_places(function(s)                                   -- sessions, then Chrome's tabs: both async
-      for _, p in ipairs(s) do all[#all + 1] = p end
-      chrome.tabs(function(t)
-        for _, p in ipairs(t) do all[#all + 1] = p end
-        table.sort(all, function(a, b)
-          local ka = (a.kind or "") .. ":" .. (a.app or a.name or "") .. ":" .. (a.title or "")
-          local kb = (b.kind or "") .. ":" .. (b.app or b.name or "") .. ":" .. (b.title or "")
-          return ka < kb
-        end)
-        local said = hs.json.encode(all)
-        if said == lastSaid then return end
-        lastSaid = said
-        town.talk("places", { places = all })
+    for _, p in ipairs(session_places()) do all[#all + 1] = p end
+    chrome.tabs(function(t)                                     -- Chrome is the only one still asked
+      for _, p in ipairs(t) do all[#all + 1] = p end
+      table.sort(all, function(a, b)
+        local ka = (a.kind or "") .. ":" .. (a.app or a.name or "") .. ":" .. (a.title or "")
+        local kb = (b.kind or "") .. ":" .. (b.app or b.name or "") .. ":" .. (b.title or "")
+        return ka < kb
       end)
+      local said = hs.json.encode(all)
+      if said == lastSaid then return end
+      lastSaid = said
+      town.talk("places", { places = all })
     end)
   end
   town.listen("menu", function(w) if w.tense == "future" and w.body.what then refresh() end end)

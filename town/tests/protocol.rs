@@ -5,7 +5,7 @@
 //! spec of how town composes — living in the repo, not in a dotfiles readme.
 
 mod common;
-use common::{effects, feed_file, golden, resident, say, ROOT};
+use common::{effects, feed_file, golden, resident, say, talked, ROOT};
 
 use mlua::{Lua, LuaSerdeExt, Table, Value as LuaValue};
 use serde_json::{json, Value};
@@ -156,6 +156,149 @@ fn window_and_session_flips_keep_independent_positions() {
     assert_eq!(say(&lua, &place, step("session", 1)).unwrap()["body"]["name"], "one");
     assert_eq!(say(&lua, &place, step("window", -1)).unwrap()["body"]["app"], "B");
     assert_eq!(say(&lua, &place, step("session", -1)).unwrap()["body"]["name"], "two");
+}
+
+// ── tmux: a motion is a word, and the table turns it into a tmux command. Nothing synthesizes a
+// keystroke for tmux to match any more — the command runs in our client's context, and our client
+// shadows your session, so "current pane" is the one you are looking at. ──
+#[test]
+fn a_motion_becomes_the_tmux_command_for_it() {
+    let (lua, tmux) = resident("tmux", json!({}), json!({}));
+    let motion = |verb: &str, dir: &str| json!({ "kind": "transport", "tense": "future",
+        "body": { "verb": verb, "dir": dir } });
+
+    let w = say(&lua, &tmux, motion("point", "h")).unwrap();
+    assert_eq!(w["kind"], "work");
+    assert_eq!(w["body"]["at"], "tmux");
+    let cmd = w["body"]["cmd"].as_str().unwrap().to_string();
+    assert!(cmd.starts_with("if -F '#{m:*vim*"), "whoever occupies the pane is asked first: {cmd}");
+    assert!(cmd.contains("send-keys M-h"), "a vim pane gets the key");
+    assert!(cmd.contains("select-pane -L"), "otherwise tmux moves");
+    assert!(cmd.contains("select-pane -t '{right}'"), "and at the left edge it wraps");
+
+    let cell = say(&lua, &tmux, motion("cell", "l")).unwrap();
+    assert!(cell["body"]["cmd"].as_str().unwrap().contains("swap-pane -t '{right-of}'"));
+    assert_eq!(say(&lua, &tmux, motion("zoom", "z")).unwrap()["body"]["cmd"], "resize-pane -Z");
+    assert_eq!(say(&lua, &tmux, motion("tab", "next")).unwrap()["body"]["cmd"], "next-window");
+
+    // flip never reaches tmux unless the pane is vim: the session trail is town's own, so there
+    // is nothing to fork a shell for
+    let (lua2, t2) = resident("tmux", json!({ "vim": { "active": "0" } }), json!({}));
+    assert_eq!(say(&lua2, &t2, motion("flip", "o")).unwrap(),
+        json!({ "kind": "place", "tense": "future", "body": { "step": 1, "kind": "session" } }));
+    assert_eq!(say(&lua2, &t2, motion("flip", "i")).unwrap()["body"]["step"], -1);
+
+    let (lua3, t3) = resident("tmux", json!({ "vim": { "active": "1" } }), json!({}));
+    let w = say(&lua3, &t3, motion("flip", "o")).unwrap();
+    assert_eq!(w["body"]["cmd"], "send-keys M-o", "a vim pane gets the key, for its buffers");
+    assert_eq!(w["body"]["at"], "tmux");
+
+    // a motion the table does not name says nothing rather than guessing
+    assert_eq!(say(&lua, &tmux, motion("point", "x")), None);
+    assert_eq!(say(&lua, &tmux, motion("nonsense", "h")), None);
+}
+
+// ── tmux: what town does NOT care about passes, and our own move is not where you are. ──
+#[test]
+fn a_line_from_the_joined_tmux_says_where_you_went() {
+    let (lua, tmux) = resident("tmux", json!({}), json!({}));
+    let line = |l: &str| json!({ "kind": "tmux", "tense": "past", "body": l });
+
+    let w = say(&lua, &tmux, line("%client-session-changed client-18228 $38 retool")).unwrap();
+    assert_eq!(w, json!({ "kind": "place", "tense": "present",
+        "body": { "kind": "session", "name": "retool" } }));
+    // …and we follow you onto it, or everything we ask would describe a session you are not in
+    let follow = talked(&lua).pop().expect("the link follows your client");
+    assert_eq!(follow["body"]["cmd"], "switch-client -t '=retool'");
+
+    // a session name with a space survives whole
+    let w = say(&lua, &tmux, line("%client-session-changed client-1 $2 my work")).unwrap();
+    assert_eq!(w["body"]["name"], "my work");
+
+    // our own move is not where YOU are — but it does change what we are describing, so ask
+    let w = say(&lua, &tmux, line("%session-changed $37 ours")).unwrap();
+    assert!(w["body"]["cmd"].as_str().unwrap().starts_with("display-message -p 'town|"));
+    // so does a pane change, and so does a session coming or going
+    assert!(say(&lua, &tmux, line("%window-pane-changed @3 %21")).is_some());
+    assert!(say(&lua, &tmux, line("%sessions-changed")).is_some());
+
+    // the subscription still catches a command that changes in place, moving no pane
+    let w = say(&lua, &tmux, line("%subscription-changed vim $7 - - - : claude")).unwrap();
+    assert_eq!(w, json!({ "kind": "vim", "tense": "present", "body": { "active": "0" } }));
+
+    // the rest of the protocol is not ours to care about
+    assert_eq!(say(&lua, &tmux, line("%window-renamed @35 zsh")), None);
+    assert_eq!(say(&lua, &tmux, line("")), None);
+}
+
+// ── tmux: a reply that names itself. `source-file` answers with one block per line in the file,
+// so nothing can match a reply to its command by position — the answer carries its own label and
+// everything town needs from the terminal arrives in one line. ──
+#[test]
+fn one_labelled_line_carries_the_whole_terminal() {
+    let (lua, tmux) = resident("tmux", json!({}), json!({}));
+    let line = |l: &str| json!({ "kind": "tmux", "tense": "past", "body": l });
+
+    // the connection coming up: ask, and set the backstop subscription
+    let w = say(&lua, &tmux, json!({ "kind": "tmux", "tense": "past", "body": null })).unwrap();
+    assert_eq!(w["body"]["at"], "tmux");
+    assert!(w["body"]["cmd"].as_str().unwrap().starts_with("display-message -p 'town|"));
+    let said = talked(&lua);
+    assert!(said.iter().any(|t| t["body"]["cmd"].as_str().unwrap_or("").starts_with("refresh-client -B")));
+
+    // the answer: where you are, what occupies the pane, and what exists — in one line
+    let w = say(&lua, &tmux, line("town|retool|nvim|retool,infra,notes")).unwrap();
+    assert_eq!(w, json!({ "kind": "place", "tense": "present",
+        "body": { "kind": "session", "name": "retool" } }));
+    let also = talked(&lua);
+    let vim = also.iter().find(|t| t["kind"] == "vim").expect("the pane's occupant");
+    assert_eq!(vim["body"]["active"], "1");
+    let sessions = also.iter().find(|t| t["kind"] == "sessions").expect("what exists");
+    assert_eq!(sessions["body"]["names"], json!(["retool", "infra", "notes"]));
+
+    // and it is positional in nothing: an unrelated block between does not disturb it
+    say(&lua, &tmux, line("%begin 1 2 1"));
+    say(&lua, &tmux, line("some other command's output"));
+    say(&lua, &tmux, line("%end 1 2 1"));
+    let w = say(&lua, &tmux, line("town|infra|zsh|retool,infra")).unwrap();
+    assert_eq!(w["body"]["name"], "infra");
+    assert_eq!(talked(&lua).iter().filter(|t| t["kind"] == "vim").last().unwrap()["body"]["active"], "0");
+}
+
+// ── tmux: entering a session is ONE command, and its failure is the answer. switch-client exits
+// nonzero when the session is gone, which is how the trail hears the place is no more — nothing
+// has to ask first, and nothing blocks the runtime waiting to be told. ──
+#[test]
+fn entering_a_session_heals_the_trail_when_it_is_gone() {
+    let (lua, tmux) = resident("tmux", json!({}), json!({}));
+    let enter = json!({ "kind": "place", "tense": "future", "body": { "kind": "session", "name": "work" } });
+
+    let w = say(&lua, &tmux, enter).expect("entering a session is work");
+    assert_eq!(w["kind"], "work");
+    assert_eq!(w["tense"], "future");
+    assert_eq!(w["body"]["about"], "session");
+    assert_eq!(w["body"]["name"], "work");
+    let cmd = w["body"]["cmd"].as_str().unwrap();
+    assert!(cmd.contains("switch-client -t '=work'"), "exact match, not a prefix: {cmd}");
+    assert!(!cmd.contains("has-session"), "one command — the failure is the answer");
+
+    // it worked → raise the terminal too
+    let ok = json!({ "kind": "work", "tense": "past",
+        "body": { "about": "session", "name": "work", "code": 0 } });
+    let w = say(&lua, &tmux, ok).unwrap();
+    assert_eq!(w, json!({ "kind": "place", "tense": "future",
+        "body": { "kind": "window", "app": "WezTerm" } }));
+
+    // it failed → the session is no more, and the trail walks on
+    let gone = json!({ "kind": "work", "tense": "past",
+        "body": { "about": "session", "name": "work", "code": 1 } });
+    let w = say(&lua, &tmux, gone).unwrap();
+    assert_eq!(w, json!({ "kind": "place", "tense": "past",
+        "body": { "kind": "session", "name": "work" } }));
+
+    // another resident's work is not ours to answer
+    let other = json!({ "kind": "work", "tense": "past", "body": { "code": 1, "where": "x:1" } });
+    assert_eq!(say(&lua, &tmux, other), None);
 }
 
 // ── place: tabs share one mac window, so they are told apart by Chrome's id — not by app name
