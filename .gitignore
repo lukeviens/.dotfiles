@@ -14,3 +14,6 @@ cagent
 # town-generated from the palette on every theme switch — not source, don't track
 theme/colors
 k9s/skins/luke.yaml
+
+# per-machine: which model/quant/context this box runs — see town/bin/zeta
+town/bin/model.conf.sh

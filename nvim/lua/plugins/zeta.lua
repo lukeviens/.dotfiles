@@ -9,6 +9,16 @@ return {
 		vim.fn.jobstart({ zeta }, { detach = true })
 		require("cursortab").setup({
 			contribute_data = false,
+			log_level = "debug", -- temporary: diagnosing why idle/hover suggestions aren't firing
+			keymaps = {
+				-- blink's own <Tab> chain calls cursortab.accept() directly, before its own
+				-- completion accept — see plugins/blink.lua. A second binding here would fight it.
+				accept = false,
+			},
+			blink = {
+				enabled = false, -- not a menu item — zeta is ghost text, not a competing completion
+				ghost_text = true, -- cursortab's own inline overlay, independent of blink's menu
+			},
 			provider = {
 				type = "zeta-2.1",
 				url = "http://127.0.0.1:8012",

@@ -24,6 +24,8 @@ local sh      = require("sh")
 local HOME = os.getenv("HOME")
 local watchers, townwatch, wakewatch, townwarm = {}, nil, nil, nil
 
+hs.autoLaunch(true)   -- launch Hammerspoon at login; town's own launchd job (RunAtLoad) covers itself
+
 -- every listener registers before the bus connects (bottom), so nothing misses the first words
 theme.start(town, { sh = sh, hud = hud, picker = picker })
 picker.start(town, places.decorate)

@@ -1,11 +1,15 @@
 return {
 	"neovim/nvim-lspconfig",
-	dependencies = { "williamboman/mason.nvim", "williamboman/mason-lspconfig.nvim" },
+	dependencies = { "williamboman/mason.nvim", "williamboman/mason-lspconfig.nvim", "saghen/blink.cmp" },
 	config = function()
 		require("mason").setup()
 
-		-- one attach point for every server (mason-managed or hand-started, e.g. i's LSP in
-		-- autoload.lua): keymaps, native completion, inlay hints, format-on-save.
+		-- every server gets blink.cmp's capabilities (snippets, etc.), not just ones it enables below
+		vim.lsp.config("*", { capabilities = require("blink.cmp").get_lsp_capabilities() })
+
+		require("fix").setup()
+
+		-- one attach point for every server: keymaps, inlay hints, format-on-save.
 		vim.api.nvim_create_autocmd("LspAttach", {
 			callback = function(args)
 				local bufnr = args.buf
@@ -25,9 +29,6 @@ return {
 				vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, opts("Previous Diagnostic"))
 				vim.keymap.set("n", "]d", vim.diagnostic.goto_next, opts("Next Diagnostic"))
 
-				if client:supports_method("textDocument/completion") then
-					vim.lsp.completion.enable(true, client.id, bufnr, { autotrigger = true })
-				end
 				if client:supports_method("textDocument/inlayHint") then
 					vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
 				end
@@ -56,8 +57,15 @@ return {
 		vim.lsp.config("pylsp", {
 			settings = { pylsp = { plugins = { pycodestyle = { ignore = { "E203", "E302", "E501", "E303" } } } } },
 		})
+		-- gopls/staticcheck codes to silence globally, by analyzer name — full list:
+		-- https://github.com/golang/tools/blob/master/gopls/doc/analyzers.md
+		local disabled_analyses = {
+			ST1003 = false, -- naming convention: underscores, ALL_CAPS consts
+			ST1000 = false, -- requires a package doc comment
+			ST1020 = false, -- requires exported-function comments to start with the function name
+		}
 		vim.lsp.config("gopls", {
-			settings = { gopls = { gofumpt = true, staticcheck = true, usePlaceholders = true } },
+			settings = { gopls = { gofumpt = true, staticcheck = true, usePlaceholders = true, analyses = disabled_analyses } },
 		})
 		vim.lsp.config("vtsls", {
 			settings = {

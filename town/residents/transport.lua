@@ -12,10 +12,10 @@ local function defer(to, give, els)
 end
 
 local DIR = {   -- per direction: tmux select flag · edge predicate · swap target · nvim resize char · compass · wrap target
-  h = { sel = "L", edge = "left",   of = "left-of",  win = "<", compass = "w", wrap = "right"  },
-  j = { sel = "D", edge = "bottom", of = "down-of",  win = "+", compass = "s", wrap = "top"    },
-  k = { sel = "U", edge = "top",    of = "up-of",    win = "-", compass = "n", wrap = "bottom" },
-  l = { sel = "R", edge = "right",  of = "right-of", win = ">", compass = "e", wrap = "left"   },
+  h = { sel = "L", edge = "left",   of = "left-of",  win = ">", compass = "w", wrap = "right"  },
+  j = { sel = "D", edge = "bottom", of = "down-of",  win = "-", compass = "s", wrap = "top"    },
+  k = { sel = "U", edge = "top",    of = "up-of",    win = "+", compass = "n", wrap = "bottom" },
+  l = { sel = "R", edge = "right",  of = "right-of", win = "<", compass = "e", wrap = "left"   },
 }
 local ORDER = { "h", "j", "k", "l" }   -- deterministic, so the generated file is stable (golden-diffable)
 
@@ -54,8 +54,8 @@ row("tab", "prev", "M-[", "previous-window")   -- tmux windows (tabs) — uncond
 row("tab", "next", "M-]", "next-window")       -- one town rung out from pane/split point-nav
 row("flip",   "o", "M-o", defer("vim", "M-o", 'run-shell -b "$TOWN talk future place step=1 kind=session"'))     -- previous buffer in nvim, else previous session
 row("flip",   "i", "M-i", defer("vim", "M-i", 'run-shell -b "$TOWN talk future place step=-1 kind=session"'))  -- next buffer in nvim, else next session
-row("split",  "lr", "M-%",  "split-window -h")       -- split left/right
-row("split",  "tb", "M-\"", "split-window -v")       -- split top/bottom
+row("split",  "lr", "M-%",  defer("vim", "C-w v", "split-window -h"))       -- the nvim split, else the pane — left/right
+row("split",  "tb", "M-\"", defer("vim", "C-w s", "split-window -v"))       -- the nvim split, else the pane — top/bottom
 row("zoom",   "z", "M-z",   "resize-pane -Z")         -- the pane, inner rung (Caps ⏎ / ⌃⏎)
 
 -- derive the two artifacts. it's all tmux config syntax (source-filed, not shell), so the nested
