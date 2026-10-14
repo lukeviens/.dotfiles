@@ -74,6 +74,10 @@ local function maybe_show(bufnr)
 end
 
 function M.setup()
+	-- makes this instance callable from outside the process (ask/'s own claude -p calls,
+	-- via a hook they spawn) via nvim's own --remote-expr.
+	require("fix.server").setup()
+
 	-- on idle, read what the server already knows (diagnostics, hover, signatureHelp, workspace
 	-- symbols, code actions) and offer the ground-truth fix. Needs a live updatetime; CursorHold
 	-- otherwise waits 4s.

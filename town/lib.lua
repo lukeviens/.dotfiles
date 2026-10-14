@@ -119,7 +119,7 @@ end
 
 -- on: a talk clause — match a word by kind, tense, and what it goes by; run act(w). A word can name
 -- its referent by a field (a future place by `step`, by `slot`, by name) — `by = "step"` is a
--- word that has one; `by = { kind = "session" }` a word whose fields are these.
+-- word that has one; `by = { kind = "session" }` a word whose fields are these (`true`: any value).
 --   on("colors", fn)  ·  on({ kind = "place", tense = "future", by = "slot" }, fn)
 function on(spec, act)
   if type(spec) == "string" then spec = { kind = spec } end
@@ -133,7 +133,10 @@ function on(spec, act)
         local b = w.body
         if type(b) ~= "table" then return false end
         if type(by) == "string" then return b[by] ~= nil end
-        for k, v in pairs(by) do if b[k] ~= v then return false end end
+        for k, v in pairs(by) do
+          if v == true then if b[k] == nil then return false end
+          elseif b[k] ~= v then return false end
+        end
       end
       return true
     end,

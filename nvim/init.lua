@@ -24,3 +24,6 @@ require("config.autoload")
 
 -- register this nvim's RPC socket by tmux pane (for the stack-wide leader)
 require("config.panereg")
+
+-- visual selection -> ask Claude Code a question about it
+require("ask").setup()

@@ -98,6 +98,11 @@ vim.opt.clipboard:prepend({ "unnamed", "unnamedplus" })
 vim.opt.mouse = "a"
 vim.opt.timeoutlen = 300   -- a prefix waits this long for the rest; 1000 is felt
 
+-- wezterm-through-tmux sends plain Tab as the same byte as <C-i> — with no Normal-mode <Tab>
+-- map of its own, nvim falls through to <C-i>'s builtin (jump forward in the jumplist),
+-- teleporting the cursor on a bare Tab press that was never meant to jump anywhere.
+vim.keymap.set('n', '<Tab>', '<Nop>', { desc = "Tab: no-op (was aliasing <C-i> jump-forward)" })
+
 -- filetype-specific indentation
 local indent_overrides = {
 	lua        = { tabstop = 2, shiftwidth = 2 },

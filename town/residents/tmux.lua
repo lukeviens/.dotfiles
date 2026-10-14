@@ -13,7 +13,7 @@ return react {
     set("@color_active_bg", c.bg);  set("@color_active_fg", c.active)  -- mirror tmux.conf's derivation
     os.execute(TX .. " refresh-client -S 2>/dev/null")
   end),
-  on({ kind = "place", tense = "future", by = { kind = "session" } }, function(w)
+  on({ kind = "place", tense = "future", by = { kind = "session", name = true } }, function(w)   -- a step is the trail's
     local name = w.body.name   -- `=name`: exact, not a prefix match
     if not os.execute(TX .. " has-session -t '=" .. name .. "' 2>/dev/null") then
       return event("place", w.body)  -- no such session any more: a past place; the trail drops it

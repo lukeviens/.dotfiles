@@ -6,6 +6,10 @@
 local sh = require("sh")
 local M = {}
 
+-- by bundle id, never hs.application.get: a name that misses falls through to a title search of
+-- every window over AX, which stalls the main thread ~1.5s while the picker takes focus.
+local function running() return hs.application.applicationsForBundleID("com.google.Chrome")[1] end
+
 -- skipped entirely if Chrome isn't running — a bare `tell application` would launch it otherwise.
 -- (ASCII character 9/10, not `tab`/`linefeed` — those bareword constants resolve to Chrome's own
 -- dictionary terms inside its `tell` block, so `&`-ing them in stringifies to the literal words.)
@@ -23,7 +27,7 @@ local LIST_AS = 'tell application "Google Chrome"\n' ..
   'end tell'
 
 function M.tabs(cb)
-  if not hs.application.get("Google Chrome") then cb({}); return end
+  if not running() then cb({}); return end
   sh("osascript -e '" .. LIST_AS .. "' 2>/dev/null", function(_, out)
     local places = {}
     for line in (out or ""):gmatch("[^\r\n]+") do
@@ -47,7 +51,7 @@ local ACTIVE_AS = 'tell application "Google Chrome"\n' ..
   'end tell'
 
 function M.active(cb)
-  if not hs.application.get("Google Chrome") then cb(nil); return end
+  if not running() then cb(nil); return end
   sh("osascript -e '" .. ACTIVE_AS .. "' 2>/dev/null", function(_, out)
     local wid, tid, idx, title = (out or ""):match("^(%d+)\t(%d+)\t(%d+)\t([^\r\n]*)")
     if not wid then cb(nil); return end
@@ -84,7 +88,7 @@ local AT_AS = 'tell application "Google Chrome"\n' ..
   'end tell'
 
 function M.activate(p, onMissing)
-  if not hs.application.get("Google Chrome") then return end
+  if not running() then return end
   if p.tabId then
     sh(("osascript -e '" .. FIND_AS .. "' 2>/dev/null"):format(p.tabId), function(_, out)
       if not (out or ""):match("ok") and onMissing then onMissing() end

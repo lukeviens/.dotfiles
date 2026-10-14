@@ -63,6 +63,7 @@ return {
 			ST1003 = false, -- naming convention: underscores, ALL_CAPS consts
 			ST1000 = false, -- requires a package doc comment
 			ST1020 = false, -- requires exported-function comments to start with the function name
+			ST1021 = false, -- requires exported-type comments to start with the type name
 		}
 		vim.lsp.config("gopls", {
 			settings = { gopls = { gofumpt = true, staticcheck = true, usePlaceholders = true, analyses = disabled_analyses } },

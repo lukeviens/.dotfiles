@@ -21,6 +21,20 @@ local function existing_dir(path)
 	end
 end
 
+-- nui.nvim's NuiTree hardcodes buflisted=false and re-applies it on every
+-- redraw (file scan, git status refresh, ...), not just at buffer creation —
+-- barbar only shows listed buffers, so without fighting back here neo-tree
+-- never gets a tab and M-i/M-o skip over it.
+vim.api.nvim_create_autocmd("OptionSet", {
+	group = vim.api.nvim_create_augroup("NeoTreeListed", { clear = true }),
+	pattern = "buflisted",
+	callback = function()
+		if vim.v.option_new == false and vim.bo.filetype == "neo-tree" then
+			vim.bo.buflisted = true
+		end
+	end,
+})
+
 local function restore_cwd()
 	if vim.uv.cwd() then return end
 	local name = vim.api.nvim_buf_get_name(0)

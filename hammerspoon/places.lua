@@ -8,6 +8,12 @@ local chrome = require("chrome")
 local HOME = os.getenv("HOME")
 local watchers = {}   -- anchor the app-dir pathwatchers (module-rooted via M.stop) so they live
 
+-- a running app by exact name. not hs.application.get: a miss there searches every window's
+-- title over AX, seconds under load.
+local function running(name)
+  for _, a in ipairs(hs.application.runningApplications()) do if a:name() == name then return a end end
+end
+
 -- ── apps — cached with icons; ~300 iconForFile calls shouldn't run per open ──
 local APP_DIRS = {
   "/Applications", "/Applications/Utilities",
@@ -76,7 +82,7 @@ function M.decorate(raw)
     if not name then return end
     local hit = iconfb[name]
     if not hit then
-      local app = hs.application.get(name)
+      local app = running(name)
       local bid = app and app:bundleID()
       hit = { bid and hs.image.imageFromAppBundle(bid) or false, bid }
       iconfb[name] = hit
@@ -229,7 +235,7 @@ function M.start(bus)
       return
     end
     if not (p.kind == "window" or p.kind == "app") then return end
-    local a = hs.application.get(p.app or p.name)
+    local a = running(p.app or p.name)
     if not a then
       if p.kind == "window" and p.winId then town.talk("place", p, "past"); return end
       if p.app or p.name then hs.application.launchOrFocus(p.app or p.name) end

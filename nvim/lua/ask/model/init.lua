@@ -1,0 +1,12 @@
+-- The model interface: what the rest of ask/ depends on, never a specific backend.
+--
+-- Contract:
+--   M.run(opts) -- one chat turn. opts: prompt, root, session_id (string|nil), on_status(text),
+--     on_delta(text_so_far), on_done(ok, body, session_id). session_id in on_done is the one
+--     the backend holds; nil if no session exists yet.
+--   M.quick(prompt, on_done(ok, body)) -- a bare one-shot call for background utility tasks
+--     (ask/memory.lua's extraction step).
+--
+-- claude.lua is the one implementation today; swapping backends means changing the require
+-- below, nothing else in ask/.
+return require("ask.model.claude")
