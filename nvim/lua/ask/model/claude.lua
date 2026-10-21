@@ -135,10 +135,9 @@ function M.run(opts)
 	-- generates them; plain text mode buffers the whole answer until the process exits. ndjson
 	-- lines can split across stdout chunks, so a partial line carries over to the next chunk.
 	-- claude -p failing before it ever enters stream-json mode (missing/expired auth, a plain
-	-- CLI usage error, ...) prints plain text, not JSON, on stdout -- every line here used to
-	-- just fail its vim.json.decode and get silently discarded, leaving a failed run's error
-	-- body as a bare "Error (exit 1):" with nothing after it. unparsed_chunks keeps that text
-	-- as a fallback for exactly that case.
+	-- CLI usage error, ...) prints plain text, not JSON, on stdout. unparsed_chunks keeps every
+	-- line that fails vim.json.decode, so that failure reports its real error body instead of a
+	-- bare "Error (exit 1):" with nothing after it.
 	local pending_line, live_text, final_result, stderr_chunks, unparsed_chunks = "", "", nil, {}, {}
 	local function on_stdout(_, data)
 		if not data then return end

@@ -1,9 +1,9 @@
--- A swap file means one of two things and only one is worth stopping for: someone is editing this
--- file now, or an nvim died holding unsaved changes. Anything else is debris — and debris is most
--- of it, because a rename of the machine orphans every swap the old hostname wrote.
+-- a swap file means one of two things worth stopping for: someone is editing this file now, or an
+-- nvim died holding unsaved changes. the rest is debris — and renaming the machine orphans every
+-- swap the old hostname wrote, so debris is most of it.
 --
--- Never leave it to the prompt. E325 propagates as a Lua error through whatever called `:edit`,
--- so a stale swap turns into a stack traceback out of neo-tree rather than a question.
+-- never leave it to the prompt: E325 comes back as a Lua error through whatever called :edit, so a
+-- stale swap is a stack traceback out of neo-tree rather than a question.
 local function held_by_a_live_nvim(i)
   if i.host ~= vim.uv.os_gethostname() then return false end   -- another machine's pid means nothing
   if not i.pid or i.pid <= 0 then return false end

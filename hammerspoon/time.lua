@@ -49,8 +49,8 @@ function M.write(text)
 end
 
 -- a report: min/med/max now vs the baseline's MEDIAN, verdict on the median. Median is the
--- robust signal — the freeze we chased showed a ~10x median jump, and median doesn't cry wolf
--- on the AX-timing noise that rattles a facet's max. `tol` is the factor the median may rise
+-- robust signal — a real regression moves it, and it doesn't cry wolf on the AX-timing noise
+-- that rattles a facet's max. `tol` is the factor the median may rise
 -- before it's a regression; `floor` ignores sub-ms wobble on tiny facets. max is shown for the eye.
 function M.report(now, base, tol, floor)
   tol, floor = tol or 1.8, floor or 5

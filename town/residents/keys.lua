@@ -38,7 +38,7 @@ m["leader u"]  = surface("scroll")
 m["leader %"]  = surface("split")   -- % → split left/right
 m["leader \""] = surface("split")   -- " → split top/bottom
 m["leader m"]  = surface("menu bar")     -- opens it via AX; hjkl/return/esc drive it, all local
-m["leader F"]  = surface("click")        -- fuzzy-search & click any labeled on-screen element
+m["leader F"]  = surface("reach")        -- a letter on everything clickable; type it
 -- Caps ⇧hjkl/⇧oi: the same motion at the outermost level. HS binds them; declared for the card.
 for _, key in ipairs({ "H", "J", "K", "L", "O", "I" }) do m["leader " .. key] = surface("outer") end
 -- Caps ⏎ zooms the inner thing (tmux pane in the terminal — HS routes that; else maximize ↔

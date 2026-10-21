@@ -1,0 +1,54 @@
+#!/bin/sh
+# town as a launchd job. a plist takes absolute paths and won't expand ~, so every path in it is
+# a fact about this machine: generated and gitignored, like theme/colors and town-transport.conf.
+# the judgement calls live in launchd.conf.sh, self-healing like town/bin/model.conf.sh.
+set -e
+cd "$(dirname "$0")"
+REPO=$(cd .. && pwd)          # wherever this clone actually is, not where it was written
+LABEL=com.luke.town
+PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+
+if [ ! -f launchd.conf.sh ]; then
+  cat > launchd.conf.sh <<'DEFAULTS'
+# restart on a crash, not on a clean exit — town exits 0 when another already holds the square,
+# and a plain KeepAlive relaunches it every few seconds forever.
+RESTART_ON_CRASH=true
+THROTTLE=5
+DEFAULTS
+fi
+. ./launchd.conf.sh
+
+mkdir -p "$HOME/Library/LaunchAgents" "$HOME/.cache/town"
+cat > "$PLIST" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>$LABEL</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>$REPO/town/target/release/town</string>
+	</array>
+	<key>WorkingDirectory</key>
+	<string>$REPO/town</string>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<dict>
+		<key>SuccessfulExit</key>
+		<$([ "$RESTART_ON_CRASH" = true ] && echo false || echo true)/>
+	</dict>
+	<key>ThrottleInterval</key>
+	<integer>$THROTTLE</integer>
+	<key>StandardOutPath</key>
+	<string>$HOME/.cache/town/server.log</string>
+	<key>StandardErrorPath</key>
+	<string>$HOME/.cache/town/server.log</string>
+</dict>
+</plist>
+PLIST
+
+launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
+launchctl bootstrap "gui/$(id -u)" "$PLIST" 2>/dev/null || launchctl load "$PLIST"
+echo "town: launchd job installed at $PLIST"

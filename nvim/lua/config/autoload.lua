@@ -159,8 +159,8 @@ vim.api.nvim_create_autocmd("VimEnter", {
 	end,
 })
 
--- all three are leaves. <leader>t used to be a leaf AND the prefix of tt/ttt, so it waited out
--- timeoutlen on every press before opening.
+-- all three are leaves. a key that is also the prefix of another waits out timeoutlen on every
+-- press before it fires.
 vim.keymap.set('n', '<leader>t', '<cmd>Neotree current reveal filesystem<CR>', { desc = "Tree: filesystem" })
 vim.keymap.set('n', '<leader>b', '<cmd>Neotree current reveal buffers<CR>', { desc = "Tree: buffers" })
 vim.keymap.set('n', '<leader>g', '<cmd>Neotree current reveal git_status<CR>', { desc = "Tree: git status" })

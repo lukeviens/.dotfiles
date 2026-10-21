@@ -7,7 +7,7 @@ local sh = require("sh")
 local M = {}
 
 -- by bundle id, never hs.application.get: a name that misses falls through to a title search of
--- every window over AX, which stalls the main thread ~1.5s while the picker takes focus.
+-- every window over AX, which stalls the main thread while the picker takes focus.
 local function running() return hs.application.applicationsForBundleID("com.google.Chrome")[1] end
 
 -- skipped entirely if Chrome isn't running — a bare `tell application` would launch it otherwise.

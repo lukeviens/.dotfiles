@@ -69,7 +69,7 @@ fn keymap_lines(lua: &Lua, prefix: &str) -> Vec<Value> {
 // ── keys: the keymap describes itself (the leader hint is the map) ───────────
 #[test]
 fn the_keymap_describes_itself() {
-    let (lua, keys) = resident("keys", json!({}), json!({}));
+    let (lua, _) = resident("keys", json!({}), json!({}));
     let items = keymap_lines(&lua, "hint\tleader\t");   // the substrate written at load: the ? card
     assert!(items.iter().any(|i| i["keys"] == "f" && i["label"] == "all"));
     assert!(items.iter().any(|i| i["keys"] == "1–9" && i["label"] == "favourites")); // nine jumps collapse
@@ -90,7 +90,7 @@ fn the_keymap_describes_itself() {
 // ── keys: town owns the whole keymap; the surface binds the chords it's handed ─────
 #[test]
 fn the_keymap_wires_the_surface() {
-    let (lua, keys) = resident("keys", json!({}), json!({}));
+    let (lua, _) = resident("keys", json!({}), json!({}));
     let binds = keymap_lines(&lua, "bind\t");
     // one chord survives at the surface: ⌃⏎ zoom (aware — tmux zooms the pane in the terminal).
     // directional motion is Caps-hjkl now (HS emits ⌥hjkl itself), not a bound chord — ⌃ is freed.

@@ -1,0 +1,18 @@
+# Words the fixture keeps readable. Everything else is tokenized, so this is safe to grow — but
+# only structural words, never a data-ish one. Blank lines and # lines are ignored.
+
+# place kinds · menu whats · move dirs · arrange targets · key.at · theme names & modes
+window session app tab all apps windows sessions
+h j k l left right top bottom max fullscreen
+leader tmux next dark light sun black random
+
+# palette-blob words (base00–base0F are matched by shape, not listed)
+shared palette name mode bg fg subtle active accent
+
+# generic path segments — readability only; personal segments still tokenize
+Users code var folders private T Library home Applications System Utilities
+opt homebrew bin usr Caches cache config local share nvim cargo target release tmp
+
+# public apps — not personal, so kept readable
+Chrome Google WezTerm Slack Spotify Zoom Linear Finder Safari Notes Messages
+Mail Terminal Code Figma Notion Discord Obsidian Hammerspoon Settings Calculator 1Password

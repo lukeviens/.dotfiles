@@ -12,15 +12,15 @@ local function set(opt, val) talk(tmux("set -g " .. opt .. " '" .. val .. "'")) 
 local ASK = "display-message -p 'town|#{session_name}|#{pane_current_command}|#{S:#{session_name}#,}'"
 
 -- the backstop: a command that changes in place (you type `nvim` in the pane you are in) moves
--- no pane and notifies nothing. Subscriptions are evaluated on a ~1s tick, so they cannot be the
--- fast path — only the one that catches what has no event at all.
+-- no pane and notifies nothing. tmux evaluates a subscription on its own timer rather than on the
+-- change, so this is never the fast path — only the one that catches what has no event at all.
 local SUBSCRIBE = [[refresh-client -B "vim::#{pane_current_command}"]]
 
 local function vim_is(out) return fact("vim", { active = out:match("vim") and "1" or "0" }) end
 
--- ── the transport: how a motion becomes a tmux command. One table; tmux's own keymap is derived
--- from it (so a physical ⌥h still works) and town's `transport` word is answered from it. The
--- key manifest Hammerspoon used to read is gone — nothing injects keystrokes any more.
+-- ── the transport: how a motion becomes a tmux command. one table — tmux's own keymap derives
+-- from it (so a physical ⌥h still works) and town's `transport` word is answered from it. nothing
+-- injects keystrokes, so there is no key manifest for a surface to read.
 local HOME = os.getenv("HOME")
 
 -- defer: the one primitive. Delegate a motion to whoever occupies the pane — if pane_current_command
@@ -31,10 +31,10 @@ local function defer(to, give, els)
 end
 
 local DIR = {   -- per direction: tmux select flag · edge predicate · swap target · nvim resize char · compass · wrap target
-  h = { sel = "L", edge = "left",   of = "left-of",  win = "<", compass = "w", wrap = "right"  },
-  j = { sel = "D", edge = "bottom", of = "down-of",  win = "+", compass = "s", wrap = "top"    },
-  k = { sel = "U", edge = "top",    of = "up-of",    win = "-", compass = "n", wrap = "bottom" },
-  l = { sel = "R", edge = "right",  of = "right-of", win = ">", compass = "e", wrap = "left"   },
+  h = { sel = "L", edge = "left",   of = "left-of",  win = ">", compass = "w", wrap = "right"  },
+  j = { sel = "D", edge = "bottom", of = "down-of",  win = "-", compass = "s", wrap = "top"    },
+  k = { sel = "U", edge = "top",    of = "up-of",    win = "+", compass = "n", wrap = "bottom" },
+  l = { sel = "R", edge = "right",  of = "right-of", win = "<", compass = "e", wrap = "left"   },
 }
 local ORDER = { "h", "j", "k", "l" }   -- deterministic, so the generated file is stable (golden-diffable)
 
@@ -73,8 +73,8 @@ row("tab", "prev", "M-[", "previous-window")   -- tmux windows (tabs) — uncond
 row("tab", "next", "M-]", "next-window")       -- one town rung out from pane/split point-nav
 row("flip",   "o", "M-o", defer("vim", "M-o", 'run-shell -b "$TOWN talk future place step=1 kind=session"'))     -- previous buffer in nvim, else previous session
 row("flip",   "i", "M-i", defer("vim", "M-i", 'run-shell -b "$TOWN talk future place step=-1 kind=session"'))  -- next buffer in nvim, else next session
-row("split",  "lr", "M-%",  "split-window -h")       -- split left/right
-row("split",  "tb", "M-\"", "split-window -v")       -- split top/bottom
+row("split",  "lr", "M-%",  defer("vim", "C-w v", "split-window -h"))   -- the nvim split, else the pane
+row("split",  "tb", "M-\"", defer("vim", "C-w s", "split-window -v"))   -- the nvim split, else the pane
 row("zoom",   "z", "M-z",   "resize-pane -Z")         -- the pane, inner rung (Caps ⏎ / ⌃⏎)
 
 -- derive the two artifacts. it's all tmux config syntax (source-filed, not shell), so the nested
@@ -90,7 +90,7 @@ for _, r in ipairs(rows) do cmd[r[1]] = cmd[r[1]] or {}; cmd[r[1]][r[2]] = r[4] 
 
 -- hot-reload: push the regenerated binds into the live tmux NOW, and watch tmux.conf so hand edits
 -- to it reload too — the same save-to-reload DX as the residents + HS. Over the connection
--- residents/tmux.lua holds, so there is no shell: a failure comes back as %error, not a status.
+-- this file holds, so there is no shell: a failure comes back as %error, not a status.
 local function source(file) talk(work("source-file '" .. file .. "'", { at = "tmux" })) end
 source(HOME .. "/.config/tmux/town-transport.conf")   -- the binds we just wrote
 
@@ -126,7 +126,7 @@ local r = react {
 
   -- entering a session still goes through a shell: switch-client's exit code is the answer, and a
   -- line written to the connection has no answer until %begin/%end is correlated.
-  on({ kind = "place", tense = "future", by = { kind = "session" } }, function(w)
+  on({ kind = "place", tense = "future", by = { kind = "session", name = true } }, function(w)
     return work(TX .. " switch-client -t '=" .. w.body.name .. "' 2>/dev/null",
       { about = "session", name = w.body.name })
   end),

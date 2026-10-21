@@ -23,8 +23,8 @@ function t.start(town, d)
     if changed then
       d.hud.toast("theme ↻")
       -- repaint every registered zsh prompt (.zshrc). nvim is on the square and hears the palette
-      -- there. The comm check guards PID reuse and drops stale files; one ps for all pids, because
-      -- per-pid was 1.2s at 130 shells.
+      -- there. the comm check guards PID reuse and drops stale files; one ps for all
+      -- pids, not one ps per pid.
       d.sh([[for e in shells:zsh; do
   dir="$HOME/.cache/town/${e%%:*}"; want="${e##*:}"
   [ -d "$dir" ] || continue

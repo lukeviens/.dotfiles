@@ -17,7 +17,7 @@ local time = require("time")         -- the ? card's second page: town's pace as
 local chrome = require("chrome")   -- Chrome's innermost rung for hjkl: spatial tab cycling (see tree.plan)
 local tree = require("tree")       -- the one decision: action+depth+surface → what a key does
 local menunav = require("menunav")   -- drives an open mac menu (leader m) purely via AX, no keys
-local reach = require("reach")       -- search-and-click any labeled on-screen element (leader ⇧F)
+local reach = require("reach")       -- a letter on everything clickable; type it (leader ⇧F)
 
 -- Shift-held keys the exclusive tap must pass to the modal. Every entry needs a matching
 -- leader:bind({ "shift" }, …) below; one without it is swallowed silently.
@@ -42,8 +42,7 @@ function M.start(town, windows, warm)
   local inTerm = windows.in_term   -- "am I in the terminal?" — decided in windows (it owns the transport)
   local inVim = windows.in_vim     -- "is that pane running vim?" — also windows' (it owns the transport)
   local MAC = { edge = windows.resize, cell = windows.snap }   -- tree.plan's "mac" act, by register
-  -- a motion the terminal owns. town says it to tmux over the connection it holds; HS no longer
-  -- synthesizes a keystroke for tmux to match.
+  -- a motion the terminal owns. town says it to tmux over the connection it holds.
   local function transport(verb, dir) town.talk("transport", { verb = verb, dir = dir }, "future") end
   local function ctx() return { inTerm = inTerm(), inVim = inVim(), inChrome = chrome.in_chrome() } end
 
@@ -168,7 +167,10 @@ function M.start(town, windows, warm)
     usedHold = true
     if hud.cardShown("time") then hud.hideCard()
     elseif hud.cardShown("keys") then hud.showTable(time.card())                       -- second page: the pace
-    else hud.showCard(keys.hints("leader")) end   -- read on the press: town may have rewritten it
+    else
+      local b = town.present("build")
+      hud.showCard(keys.hints("leader"), b and b.stale and "stale build — setup.sh" or nil)
+    end   -- read on the press: town may have rewritten it
   end)
   leader:bind({}, "escape", function()
     if inMenu then menunav.cancel(); inMenu = false; hud.badge(register, locate(depth))
@@ -214,6 +216,7 @@ function M.start(town, windows, warm)
 end
 
 function M.stop()   -- teardown + GC anchor (its upvalues keep the eventtap + badge + modal reachable)
+  reach.stop()      -- a reload must not strand its overlay or its keyboard tap
   if modeOn then leader:exit() end
   if townmodetap then townmodetap:stop() end
   hud.stop()

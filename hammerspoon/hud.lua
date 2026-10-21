@@ -133,7 +133,7 @@ local function up(c, which)
 end
 
 -- the key card: { keys, label } items, key column right-aligned, two columns past seven rows.
-function M.showCard(items)
+function M.showCard(items, note)
   items = items or {}
   if #items == 0 then
     return
@@ -143,7 +143,7 @@ function M.showCard(items)
   local KEYW, GAP, LBLW = 82, 12, 150
   local colW = KEYW + GAP + LBLW
   local W, H = PAD * 2 + colW * ncols, PAD + TITLE + rows * ROW + FOOT
-  local c = frame(W, H, "◆ town", "?  time  ·  esc closes")
+  local c = frame(W, H, "◆ town", (note and note .. "  ·  " or "") .. "?  time  ·  esc closes")
   for i, it in ipairs(items) do
     local col, r = math.floor((i - 1) / rows), (i - 1) % rows -- fill column-major
     local x, y = PAD + col * colW, PAD + TITLE + r * ROW

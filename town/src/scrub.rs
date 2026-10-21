@@ -1,8 +1,8 @@
 //! Scrub a real past.log into a shareable fixture. Fail-closed: every string word is tokenized
 //! unless it's vocabulary the code knows — a kind, enum, key, hex, or number. So a name, a title, a
-//! path segment gets scrubbed whether or not its field was ever named; an incomplete SAFE list only
-//! tokenizes more, never less. Tokens are a salted hash in one namespace, so `mind` the session and
-//! `…/code/mind` the cwd land on the same token and relations survive. Salt + codebook are local +
+//! path segment gets scrubbed whether or not its field was ever named; a word missing from
+//! `scrub.safe` only tokenizes more, never less. Tokens are a salted hash in one namespace, so
+//! `mind` the session and `…/code/mind` the cwd land on the same token and relations survive. Salt + codebook are local +
 //! gitignored. Raw logs only.
 
 use std::collections::{BTreeMap, HashSet};
@@ -11,25 +11,16 @@ use serde_json::Value;
 
 use crate::word::Word;
 
-/// Words the code understands, not data: enums residents branch on, palette-blob keys, generic path
-/// segments (readability only), public apps. Everything else is data → tokenized. Missing a word
-/// just tokenizes it, so this is safe to grow — but only add structural tokens, never a data-ish one.
-const SAFE: &[&str] = &[
-    // place kinds · menu whats · move dirs · arrange targets · key.at · theme names & modes
-    "window", "session", "app", "tab", "all", "apps", "windows", "sessions",
-    "h", "j", "k", "l", "left", "right", "top", "bottom", "max", "fullscreen",
-    "leader", "tmux", "next", "dark", "light", "sun", "black", "random",
-    // palette-blob words (the `colors` value is a raw key=value string; base00–0F handled below)
-    "shared", "palette", "name", "mode", "bg", "fg", "subtle", "active", "accent",
-    // generic path segments — readability only; personal segments still tokenize
-    "Users", "code", "var", "folders", "private", "T", "Library", "home", "Applications",
-    "System", "Utilities", "opt", "homebrew", "bin", "usr", "Caches", "cache", "config",
-    "local", "share", "nvim", "cargo", "target", "release", "tmp",
-    // known public apps (not personal) — kept readable
-    "Chrome", "Google", "WezTerm", "Slack", "Spotify", "Zoom", "Linear", "Finder", "Safari",
-    "Notes", "Messages", "Mail", "Terminal", "Code", "Figma", "Notion", "Discord", "Obsidian",
-    "Hammerspoon", "Settings", "Calculator", "1Password",
-];
+/// The words `scrub.safe` keeps readable — vocabulary the code understands, not data. Everything
+/// else is tokenized, so a missing word costs readability, never safety.
+const SAFE: &str = include_str!("../scrub.safe");
+
+fn safe_words() -> HashSet<&'static str> {
+    SAFE.lines()
+        .filter(|l| !l.trim_start().starts_with('#'))
+        .flat_map(str::split_whitespace)
+        .collect()
+}
 
 pub struct Scrubber {
     salt: [u8; 16],
@@ -39,7 +30,7 @@ pub struct Scrubber {
 
 impl Scrubber {
     pub fn new(salt: [u8; 16]) -> Self {
-        Scrubber { salt, safe: SAFE.iter().copied().collect(), codebook: BTreeMap::new() }
+        Scrubber { salt, safe: safe_words(), codebook: BTreeMap::new() }
     }
 
     /// Scrub one word: walk its body and rewrite every string value. The kind and tense are the

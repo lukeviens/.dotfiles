@@ -17,3 +17,6 @@ k9s/skins/luke.yaml
 
 # per-machine: which model/quant/context this box runs — see town/bin/zeta
 town/bin/model.conf.sh
+
+# per-machine: how launchd should keep town — see launchd/town
+launchd/launchd.conf.sh

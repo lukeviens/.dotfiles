@@ -1,7 +1,7 @@
 -- Every keybind ask/ defines, grouped by which buffer it applies to. One table drives both
 -- the actual vim.keymap.set calls (M.apply) and the ? help view (M.help_lines) -- the same
 -- data, so they can never drift the way separately hand-written desc strings and a
--- hand-written hint string could (same idea as town/residents/transport.lua).
+-- hand-written hint string could (same idea as town/residents/translators/tmux.lua).
 --
 -- Each entry: { mode, key, desc, action } -- action names a callback the caller supplies to
 -- M.apply at the point the real buffer exists (closures aren't available at module-load
@@ -83,8 +83,8 @@ local TITLES = {
 }
 local ORDER = { "transcript", "compose", "diff", "discuss", "memory_view", "help" }
 
--- TITLES/ORDER duplicate M.registry's keys by hand -- a forgotten entry used to just vanish
--- from the ? screen. Fail loudly instead.
+-- TITLES/ORDER duplicate M.registry's keys by hand. Assert both cover every context, so a
+-- missing entry stops nvim instead of quietly dropping a section from the ? screen.
 for ctx in pairs(M.registry) do
 	assert(TITLES[ctx], "keymap.lua: context '" .. ctx .. "' has no TITLES entry")
 	assert(vim.tbl_contains(ORDER, ctx), "keymap.lua: context '" .. ctx .. "' missing from ORDER")

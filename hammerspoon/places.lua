@@ -14,7 +14,7 @@ local function running(name)
   for _, a in ipairs(hs.application.runningApplications()) do if a:name() == name then return a end end
 end
 
--- ── apps — cached with icons; ~300 iconForFile calls shouldn't run per open ──
+-- ── apps — cached with icons; an iconForFile per app shouldn't run on every open ──
 local APP_DIRS = {
   "/Applications", "/Applications/Utilities",
   "/System/Applications", "/System/Applications/Utilities",
@@ -43,8 +43,8 @@ function M.list_apps(fresh)
   return out
 end
 
--- ── windows — cached. one w:title() is an accessibility call (~2ms); querying every window on
--- each picker open was the lag. a window.filter invalidates the cache only when a window opens or
+-- ── windows — cached. one w:title() is an accessibility call, so querying every window on each
+-- picker open is where the lag comes from. a window.filter invalidates the cache only when a window opens or
 -- closes, so repeated opens are instant (titles can be a touch stale between structural changes —
 -- fine for a picker). icons resolve at render. ──
 local iconfb = {}   -- name → { image|false, key }: the AX/bundle icon lookup runs once per app, ever
@@ -55,8 +55,8 @@ function M.list_windows(fresh)
   if fresh then win_cache = nil end          -- force a cold rebuild (the time suite uses this)
   if win_cache then return win_cache end
   local out = {}
-  -- the filter keeps the visible standard windows current from events, so this list is ~0.4ms;
-  -- hs.window.orderedWindows() walked all ~200 windows through AX: 75ms idle, 1.5s under load.
+  -- the filter keeps the visible standard windows current from events;
+  -- hs.window.orderedWindows() reaches the same list by walking every window through AX.
   for _, w in ipairs(winfilter and winfilter:getWindows() or hs.window.orderedWindows()) do
     local title = w:title()
     if w:isStandard() and title ~= "" then
@@ -143,7 +143,7 @@ end
 -- The active tab is a place. It changes with no mac focus change, so report_front never sees it;
 -- a tab switch always retitles the window, so the title change is the signal. Deduped by tab id —
 -- a page that retitles itself (an unread count) fires the same event.
--- Debounced: the query is a ~100ms osascript and a loading page retitles several times.
+-- Debounced: the query is an osascript and a loading page retitles several times.
 local lastTab, tabTimer
 function M.report_tab()
   if not chrome.in_chrome() then return end

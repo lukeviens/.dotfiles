@@ -34,11 +34,6 @@ windows.start(town)
 places.start(town)
 mode.start(town, windows, places.list_windows)
 
--- the residents reload themselves; the binary does not. town says on boot whether it is current.
-town.listen("build", function(w)
-  if w.body and w.body.stale then hud.toast("town: stale build — run setup.sh", 4) end
-end)
-
 -- focus changed → report it, and set the terminal-aware chord mode. Pull-only; no reconcile timer.
 townwatch = hs.application.watcher.new(function(_, event)
   if event == hs.application.watcher.activated then

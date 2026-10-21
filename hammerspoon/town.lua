@@ -43,10 +43,14 @@ end
 local function join()                    -- open (or reopen) the one connection to the square
   if sq then pcall(function() sq:disconnect() end) end   -- tear down any stale socket first
   sq = hs.socket.new(function(data)
-    if not data or data == "" then return end  -- EOF/disconnect: do NOT re-arm (would spin the main thread)
-    lastRx = hs.timer.secondsSinceEpoch()
-    for line in data:gmatch("[^\r\n]+") do dispatch(line) end
-    if sq then sq:read("\n") end         -- re-arm for the next line
+    -- re-arm while the socket is live. an empty read is not a hangup; treating it as one stops the
+    -- loop for good. the connected() guard is what keeps EOF from spinning the main thread.
+    if not (sq and sq:connected()) then return end
+    if data and data ~= "" then
+      lastRx = hs.timer.secondsSinceEpoch()
+      for line in data:gmatch("[^\r\n]+") do dispatch(line) end
+    end
+    sq:read("\n")
   end)
   sq:connect(SQUARE, function()
     lastRx = hs.timer.secondsSinceEpoch()
@@ -55,21 +59,16 @@ local function join()                    -- open (or reopen) the one connection 
   end)
 end
 
--- boot town's residents, open the connection, and start the reconnect heartbeat. Call once,
--- AFTER every listener is registered, so nothing misses the present the square greets us with.
+-- open the connection and keep it open. Call once, AFTER every listener is registered, so nothing
+-- misses the present the square greets us with. launchd owns whether town runs; this only connects.
 function M.start()
-  hs.task.new(TOWN, nil, {}):start()   -- boot town (raises its residents from residents.lua)
   join()
-  -- Reconnect if town restarts. hs.socket:connected() can lie (stays true on a half-dead socket),
-  -- so we don't trust it alone: every tick we ping, town echoes every word back on the join, and
-  -- if no bytes have landed for a while the link is really dead → rejoin. Idle-cheap, self-healing.
+  -- hs.socket:connected() can lie (stays true on a half-dead socket), so we don't trust it alone:
+  -- every tick we ping, town echoes every word back on the join, and if no bytes have landed for a
+  -- while the link is really dead → rejoin. Idle-cheap, self-healing.
   townlink = hs.timer.doEvery(2, function()
-    local now = hs.timer.secondsSinceEpoch()
-    if not (sq and sq:connected()) or now - lastRx > 6 then
-      join()
-    else
-      pcall(function() sq:write('{"kind":"ping","tense":"future"}\n') end)   -- echoes back → refreshes lastRx
-    end
+    if not (sq and sq:connected()) or hs.timer.secondsSinceEpoch() - lastRx > 6 then join()
+    else pcall(function() sq:write('{"kind":"ping","tense":"future"}\n') end) end   -- echoes back → refreshes lastRx
   end)
   return M
 end

@@ -62,12 +62,12 @@ end
 -- within each one. A line with no closing punctuation gets one, so its tail still matches.
 local function split_sentences(text)
 	local sentences = {}
-	for line in text:gmatch("[^\n]+") do
-		line = vim.trim(line)
+	for raw in text:gmatch("[^\n]+") do
+		local line = vim.trim(raw)
 		if not line:find("[%.!?]$") then line = line .. "." end
-		for s in (line .. " "):gmatch("(.-[%.!?])%s+") do
-			s = vim.trim(s)
-			if s ~= "" then sentences[#sentences + 1] = s end
+		for chunk in (line .. " "):gmatch("(.-[%.!?])%s+") do
+			local sentence = vim.trim(chunk)
+			if sentence ~= "" then sentences[#sentences + 1] = sentence end
 		end
 	end
 	return sentences
@@ -144,8 +144,8 @@ function M.extract(candidates, on_done)
 			return
 		end
 		local facts = {}
-		for line in body:gmatch("[^\n]+") do
-			line = vim.trim((line:gsub("^%s*[%-%*•]%s*", ""):gsub("^%d+[%.%)]%s*", "")))
+		for raw in body:gmatch("[^\n]+") do
+			local line = vim.trim((raw:gsub("^%s*[%-%*•]%s*", ""):gsub("^%d+[%.%)]%s*", "")))
 			if line ~= "" and not line:find("^%(nothing%)") then facts[#facts + 1] = line end
 		end
 		on_done(facts)

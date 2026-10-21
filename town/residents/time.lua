@@ -2,14 +2,14 @@
 -- of that kind whose body fits closes it, and the gap is the answer's time. Gaps fold into the
 -- present `time` (median, max, n per kind). `slow`: one gap far outside its kind's past, or a
 -- kind's median well above the last open's. A future `time` is the hand microbench (HS runs it).
-local KEEP, EVERY = 64, 20          -- gaps kept per kind; the fold is talked every EVERY gaps
+local KEEP, EVERY = 64, 1000        -- gaps kept per kind; the fold is talked at most every EVERY ms
 local ODD, FLOOR = 5, 100           -- slow: over ODD × the kind's median, and at least FLOOR ms
 local DRIFT, AT = 3, 16             -- regress: at AT gaps, median over DRIFT × the last open's
 local STALE = 5000                  -- an intent unanswered this long is forgotten, not measured
 local OPEN = 8                      -- open intents kept per kind (a fact closes the newest it fits)
 local waits, kinds = {}, {}         -- kind → open intents {at, body}, oldest first; kind → ring of gaps
 local was = present("time") or {}   -- the last open's fold
-local seen = 0
+local said = 0                      -- `at` of the last fold talked
 
 local function fits(intent, fact)   -- every scalar key they share agrees
   if type(intent) ~= "table" or type(fact) ~= "table" then return true end
@@ -63,7 +63,6 @@ return {
     local a = kinds[k]
     if not a then a = { t = {}, i = 0, n = 0 }; kinds[k] = a end
     a.n = a.n + 1; a.i = a.i % KEEP + 1; a.t[a.i] = gap
-    seen = seen + 1
     local med = median(a.t)
     if a.n > AT // 2 and gap >= FLOOR and gap > ODD * med then
       return event("slow", { kind = k, ms = gap, med = med })
@@ -72,6 +71,6 @@ return {
     if old and a.n == AT and med >= FLOOR and med > DRIFT * old.med then   -- once per kind per open
       return event("slow", { kind = k, ms = med, med = old.med, regress = true })
     end
-    if seen < 5 or seen % EVERY == 0 then return fact("time", fold()) end   -- early folds land fast
+    if w.at - said >= EVERY then said = w.at; return fact("time", fold()) end
   end,
 }

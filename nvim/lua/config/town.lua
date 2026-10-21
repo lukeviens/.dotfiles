@@ -1,6 +1,6 @@
--- town.lua — nvim as a town surface. One connection to the square, held: nvim reports what only
--- nvim knows (its RPC socket, its cwd) and obeys the words town sends it. A `town talk` per event
--- was a process spawned to say one word.
+-- town.lua — nvim as a town surface: one held connection to the square. nvim reports what only
+-- nvim knows (its RPC socket, its cwd) and obeys the words town sends back. a `town talk` per
+-- event is a process spawned to say one word.
 local M = { on = {} }
 
 local SQUARE = vim.fn.expand("~/.cache/town/square.sock")

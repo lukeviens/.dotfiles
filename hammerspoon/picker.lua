@@ -1,5 +1,5 @@
 -- picker.lua — a themed webview picker, built ONCE and reused (show/hide) so opening is
--- instant: the list renders from injected data, and the icons (~250KB of data-urls) stream
+-- instant: the list renders from injected data, and the icons (as data-urls) stream
 -- in a tick later — the list is what you want to see first. The "gui shim" over Hammerspoon.
 --
 -- THE SEAM (own this call; swap what's behind it):
@@ -265,9 +265,8 @@ local function grabKey(mine, n)
   grabTimer = nil
   if not wv then return end
   -- make the window key: activate HS by pid (NSRunningApplication, no search), then show() again,
-  -- which is makeKeyAndOrderFront and only takes once the app is active. (It used to be
-  -- wv:hswindow():focus() — the same result via an AX search of every window on the machine,
-  -- ~1.6s on an M1 Pro. That one call was the whole of the picker's lag.)
+  -- which is makeKeyAndOrderFront and only takes once the app is active. wv:hswindow():focus()
+  -- reaches the same result through an AX search of every window on the machine.
   local me = hs.application.applicationForPID(hs.processInfo.processID)
   if me then me:activate(true) end
   wv:show()
