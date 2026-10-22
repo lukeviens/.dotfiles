@@ -70,7 +70,7 @@ function M.start(town, windows, warm)
     usedHold = true
     town.talk("key", { at = at or "leader", press = press }, "past")
   end
-  for c in ("abfgnpqrstvwxyz0123456789/"):gmatch(".") do   -- hjkl + e/c + d/u + o/i + %/" + m handled below
+  for c in ("abfgnpqrstwxyz0123456789/"):gmatch(".") do   -- hjkl + e/c + d/u + o/i + %/" + m + v handled below
     leader:bind({}, c, function() onKey(c) end)
   end
   leader:bind({}, "m", function()
@@ -78,20 +78,27 @@ function M.start(town, windows, warm)
     inMenu = menunav.open()
     if inMenu then hud.badge("menu") else hud.badge(register, locate(depth)) end
   end)
-  -- ⇧F: fuzzy-search & click any labeled element. Deferred a tick — leaving the modal from inside
-  -- its own key dispatch is asking for trouble.
-  leader:bind({ "shift" }, "f", function()
+  -- give the keyboard to something else. Our tap swallows keys while the mode is on, so leave
+  -- first — a tick later, because leaving from inside the mode's own key dispatch is trouble.
+  local function handOff(fn)
     usedHold = true
-    hs.timer.doAfter(0, function() M.leave(); reach.open() end)
+    hs.timer.doAfter(0, function() M.leave(); fn() end)
+  end
+
+  leader:bind({ "shift" }, "f", function() handOff(reach.open) end)   -- ⇧F: a letter on everything clickable
+  -- Caps v: read the screen — tmux's copy-mode, where hjkl/v/y are vim's. Outside a terminal the
+  -- same act is reach, so there is nothing to do here.
+  leader:bind({}, "v", function()
+    if inTerm() then handOff(function() transport("read", "v") end) end
   end)
+
   -- Caps ⏎: pane zoom (inner) → wezterm fullscreen (middle) → mac maximize (outer). ⇧⏎ always
   -- goes straight to mac maximize.
   leader:bind({}, "return", function()
     usedHold = true
     if inMenu then menunav.select(); inMenu = false; hud.badge(register, locate(depth))
     elseif inTerm() and depth == 0 then transport("zoom", "z")  -- inner: zoom the pane
-    elseif inTerm() and depth == 1 then M.leave(); windows.fullscreen()  -- middle: leave first, or our
-    -- own exclusive tap (still swallowing while modeOn) eats the synthetic ⌘⏎ before WezTerm sees it
+    elseif inTerm() and depth == 1 then handOff(windows.fullscreen)   -- middle: WezTerm's own fullscreen
     else onKey("return") end                                       -- outer, or no terminal: mac maximize
   end)
 

@@ -69,6 +69,7 @@ for _, d in ipairs(ORDER) do
 end
 row("scroll", "d", "M-d",  scroll("C-d", "NPage", "down"))   -- vim C-d / alt-screen PageDown / copy-mode
 row("scroll", "u", "M-u",  scroll("C-u", "PPage", "up"))     -- vim C-u / alt-screen PageUp / copy-mode
+row("read",   "v", "M-v",   "copy-mode")                     -- point at the screen (a TUI keeps its own Escape)
 row("tab", "prev", "M-[", "previous-window")   -- tmux windows (tabs) — unconditional, no defer
 row("tab", "next", "M-]", "next-window")       -- one town rung out from pane/split point-nav
 row("flip",   "o", "M-o", defer("vim", "M-o", 'run-shell -b "$TOWN talk future place step=1 kind=session"'))     -- previous buffer in nvim, else previous session

@@ -29,8 +29,9 @@ for i = 1, 9 do m["leader " .. i] = jump(i) end
 
 -- Caps hjkl move focus at the current layer; Caps ⇧hjkl do the same one layer OUT (see below).
 for _, d in ipairs({ "h", "j", "k", "l" }) do m["leader " .. d] = move(d) end
--- Registers + structure ops HS owns (hjkl grabs the mesh element; % / " split). Declared here so
--- the map stays the whole doc and the ? card derives them; HS binds the keys, town never routes.
+-- Keys HS binds itself, declared here so the map stays the whole doc and the ? card derives them.
+-- Some act locally (arm a register, open the menu bar, reach); the terminal ones say a `transport`
+-- word and the tmux translator obeys it.
 m["leader e"]  = surface("edge")    -- arm: hjkl slides the wall (resize)
 m["leader c"]  = surface("cell")    -- arm: hjkl carries the tile (swap)
 m["leader d"]  = surface("scroll")  -- d / u → half-page down / up (vim C-d/C-u, else copy-mode scrollback)
@@ -39,6 +40,7 @@ m["leader %"]  = surface("split")   -- % → split left/right
 m["leader \""] = surface("split")   -- " → split top/bottom
 m["leader m"]  = surface("menu bar")     -- opens it via AX; hjkl/return/esc drive it, all local
 m["leader F"]  = surface("reach")        -- a letter on everything clickable; type it
+m["leader v"]  = surface("read")         -- the terminal's copy-mode: hjkl/v/y over what's on screen
 -- Caps ⇧hjkl/⇧oi: the same motion at the outermost level. HS binds them; declared for the card.
 for _, key in ipairs({ "H", "J", "K", "L", "O", "I" }) do m["leader " .. key] = surface("outer") end
 -- Caps ⏎ zooms the inner thing (tmux pane in the terminal — HS routes that; else maximize ↔

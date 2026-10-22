@@ -7,7 +7,7 @@ REPO=$(pwd)
 # formulae and casks, only if missing. `brew install --cask` on something already installed is a
 # REINSTALL, and reinstalling karabiner tears down its driver and launchd services — i.e. the
 # keyboard — halfway through, asking for sudo as it goes.
-for f in rust tmux neovim zoxide k9s fzf ripgrep tree-sitter-cli jq; do
+for f in rust tmux neovim zoxide k9s fzf ripgrep tree-sitter-cli jq zsh-vi-mode; do
   brew list --formula "$f" >/dev/null 2>&1 || brew install "$f"
 done
 for c in wezterm@nightly hammerspoon karabiner-elements font-caskaydia-mono-nerd-font; do
